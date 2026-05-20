@@ -1,0 +1,985 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // directUrl = env("DIRECT_URL")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// UTILISATEURS ET AUTHENTIFICATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model User {
+  id         String     @id @default(cuid())
+  email      String     @unique
+  password   String
+  name       String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  properties Property[]
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PARAMÈTRES DE L'AGENCE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model AgencySettings {
+  id          String   @id @default("default")
+  name        String   @default("")
+  address     String   @default("")
+  city        String   @default("")
+  postalCode  String   @default("")
+  phone       String   @default("")
+  email       String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ÉNUMÉRATIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Types de biens immobiliers
+enum PropertyType {
+  APPARTEMENT
+  MAISON
+  VILLA
+  TERRAIN
+  LOCAL_COMMERCIAL
+  BUREAUX
+  IMMEUBLE
+  PARKING
+  CAVE
+  LOFT
+  ATELIER
+  FERME
+  CHATEAU
+  PROPRIETE
+  AUTRE
+}
+
+// Sous-types de biens (pour plus de précision)
+enum PropertySubType {
+  STUDIO
+  T1
+  T2
+  T3
+  T4
+  T5_ET_PLUS
+  DUPLEX
+  TRIPLEX
+  PENTHOUSE
+  REZ_DE_JARDIN
+  DERNIER_ETAGE
+  CHAMBRE_DE_BONNE
+  LOFT
+  MAISON_DE_VILLE
+  MAISON_DE_CAMPAGNE
+  MAISON_MITOYENNE
+  MAISON_INDIVIDUELLE
+  PAVILLON
+  LONGERE
+  MAS
+  BASTIDE
+  CHALET
+  AUTRE
+}
+
+// Types de transactions
+enum TransactionType {
+  VENTE
+  LOCATION
+  VIAGER
+  LOCATION_SAISONNIERE
+}
+
+// Statut de l'annonce
+enum PropertyStatus {
+  DISPONIBLE
+  SOUS_COMPROMIS
+  SOUS_OFFRE
+  VENDU
+  LOUE
+  ARCHIVE
+  BROUILLON
+}
+
+// Classe énergétique DPE
+enum EnergyClass {
+  A
+  B
+  C
+  D
+  E
+  F
+  G
+  VIERGE
+}
+
+// État général du bien
+enum PropertyCondition {
+  NEUF
+  TRES_BON_ETAT
+  BON_ETAT
+  A_RAFRAICHIR
+  A_RENOVER
+  A_RESTAURER
+}
+
+// Orientation
+enum Orientation {
+  NORD
+  SUD
+  EST
+  OUEST
+  NORD_EST
+  NORD_OUEST
+  SUD_EST
+  SUD_OUEST
+}
+
+// Type de vue
+enum ViewType {
+  DEGAGEE
+  SUR_JARDIN
+  SUR_COUR
+  SUR_RUE
+  SUR_PARC
+  SUR_MER
+  SUR_MONTAGNE
+  PANORAMIQUE
+  SANS_VIS_A_VIS
+}
+
+// Type de cuisine
+enum KitchenType {
+  SEPAREE
+  OUVERTE
+  AMERICAINE
+  EQUIPEE
+  AMENAGEE
+  COIN_CUISINE
+}
+
+// Type de chauffage
+enum HeatingType {
+  INDIVIDUEL
+  COLLECTIF
+  MIXTE
+}
+
+// Énergie de chauffage
+enum HeatingEnergy {
+  GAZ
+  ELECTRIQUE
+  FIOUL
+  BOIS
+  POMPE_A_CHALEUR
+  GEOTHERMIE
+  SOLAIRE
+  CHAUFFAGE_URBAIN
+  MIXTE
+}
+
+// Type d'eau chaude
+enum HotWaterType {
+  INDIVIDUEL
+  COLLECTIF
+  CHAUFFE_EAU_ELECTRIQUE
+  CHAUFFE_EAU_GAZ
+  BALLON_THERMODYNAMIQUE
+  SOLAIRE
+}
+
+// Type d'assainissement
+enum SewageType {
+  TOUT_A_LEGOUT
+  FOSSE_SEPTIQUE
+  MICRO_STATION
+}
+
+// Période de construction
+enum ConstructionPeriod {
+  AVANT_1850
+  DE_1850_A_1913
+  DE_1914_A_1947
+  DE_1948_A_1969
+  DE_1970_A_1980
+  DE_1981_A_1991
+  DE_1992_A_2000
+  DE_2001_A_2010
+  DE_2011_A_2020
+  APRES_2020
+}
+
+// Standing
+enum Standing {
+  STANDARD
+  BON_STANDING
+  STANDING
+  GRAND_STANDING
+  PRESTIGE
+  LUXE
+}
+
+// Exposition lumineuse
+enum Exposure {
+  TRES_LUMINEUX
+  LUMINEUX
+  NORMAL
+  SOMBRE
+}
+
+// Catégorie d'image
+enum ImageCategory {
+  GENERAL
+  FACADE
+  SEJOUR
+  CUISINE
+  CHAMBRE
+  SALLE_DE_BAIN
+  WC
+  TERRASSE
+  BALCON
+  JARDIN
+  PISCINE
+  PARKING
+  CAVE
+  PLAN
+  VUE
+  AUTRE
+}
+
+// Type de document
+enum DocumentType {
+  // Images d'étiquettes énergie
+  DPE_IMAGE
+  GES_IMAGE
+  
+  // PDFs générés
+  LABEL_PDF
+  DESCRIPTIVE_SHEET_PDF
+  
+  // Diagnostics
+  DPE
+  DIAGNOSTIC_AMIANTE
+  DIAGNOSTIC_PLOMB
+  DIAGNOSTIC_ELECTRIQUE
+  DIAGNOSTIC_GAZ
+  DIAGNOSTIC_TERMITES
+  ERNMT
+  
+  // Documents copropriété
+  CARNET_ENTRETIEN
+  REGLEMENT_COPRO
+  PV_AG
+  
+  // Autres
+  PLAN
+  AUTRE
+}
+
+// Type de pièce
+enum RoomType {
+  ENTREE
+  SEJOUR
+  SALON
+  SALLE_A_MANGER
+  CUISINE
+  CHAMBRE
+  SUITE_PARENTALE
+  BUREAU
+  SALLE_DE_BAIN
+  SALLE_D_EAU
+  WC
+  DRESSING
+  BUANDERIE
+  CELLIER
+  CAVE
+  GRENIER
+  GARAGE
+  TERRASSE
+  BALCON
+  JARDIN
+  VERANDA
+  AUTRE
+}
+
+// Type de proximité
+enum ProximityType {
+  METRO
+  BUS
+  TRAM
+  RER
+  TRAIN
+  ECOLE_MATERNELLE
+  ECOLE_PRIMAIRE
+  COLLEGE
+  LYCEE
+  UNIVERSITE
+  CRECHE
+  SUPERMARCHE
+  COMMERCE
+  BOULANGERIE
+  PHARMACIE
+  MEDECIN
+  HOPITAL
+  PARC
+  SPORT
+  PISCINE
+  PLAGE
+  RESTAURANT
+  CINEMA
+  THEATRE
+  AUTRE
+}
+
+// Situation du demandeur d'estimation
+enum EvaluationSituation {
+  ACHAT
+  VENTE
+  RENSEIGNEMENT
+}
+
+// Statut de l'évaluation
+enum EvaluationStatus {
+  NOUVELLE
+  EN_COURS
+  TRAITEE
+  ARCHIVEE
+}
+
+// Qui supporte les honoraires (source : contrat API §2.5)
+enum HonorairesCharge {
+  ACQUEREUR
+  VENDEUR
+  PARTAGE
+}
+
+// Sujet d'un lead entrant (source : contrat API §3.1)
+enum LeadSubject {
+  BIEN_SALE
+  BIEN_RENT
+  ESTIMATION
+  APPOINTMENT
+  OTHER
+}
+
+// Profil du lead
+enum LeadProfile {
+  BUYER
+  INVESTOR
+  CURIOUS
+  TENANT
+}
+
+// Situation de financement du lead
+enum LeadFinancing {
+  APPROVED
+  IN_PROGRESS
+  TO_STUDY
+  CASH
+}
+
+// Statut interne d'un lead
+enum LeadStatus {
+  NOUVEAU
+  EN_COURS
+  TRAITE
+  ARCHIVE
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MODÈLE PRINCIPAL - PROPERTY
+// Contient les informations de base et les références vers les sous-tables
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model Property {
+  id String @id @default(cuid())
+
+  // Informations de base
+  title            String
+  description      String           @db.Text
+  shortDescription String?          @db.Text
+  reference        String           @unique
+  propertyType     PropertyType
+  propertySubType  PropertySubType?
+  transactionType  TransactionType
+  status           PropertyStatus   @default(DISPONIBLE)
+  condition        PropertyCondition?
+  standing         Standing?
+
+  // Dates
+  availableFrom DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  publishedAt   DateTime?
+  soldAt        DateTime?
+
+  // Publication et statistiques
+  isPublished   Boolean @default(false)
+  isFeatured    Boolean @default(false)
+  isExclusive   Boolean @default(false)
+  viewCount     Int     @default(0)
+  contactCount  Int     @default(0)
+  favoriteCount Int     @default(0)
+
+  // Notes internes
+  internalNotes String? @db.Text
+
+  // Relations avec sous-tables (1:1)
+  finance        PropertyFinance?
+  location       PropertyLocation?
+  characteristics PropertyCharacteristics?
+  amenities      PropertyAmenities?
+  energy         PropertyEnergy?
+  copro          PropertyCopro?
+
+  // Relations avec collections
+  images        PropertyImage[]
+  documents     PropertyDocument[]
+  rooms_details PropertyRoom[]
+  proximities   PropertyProximity[]
+
+  // Relation utilisateur (optionnelle)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  // Index pour performances
+  @@index([propertyType])
+  @@index([transactionType])
+  @@index([status])
+  @@index([isPublished])
+  @@index([isFeatured])
+  @@index([createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DONNÉES FINANCIÈRES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model PropertyFinance {
+  id         String   @id @default(cuid())
+  propertyId String   @unique
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  // Prix principal
+  price         Float
+  pricePerMeter Float?
+  charges       Float?
+  chargesIncluses Boolean @default(false)
+
+  // Honoraires
+  honoraires       Float?
+  honorairesType   String?            // Historique — libellé libre (ex. "CHARGE_ACQUEREUR"). Conservé pour rétro-compat.
+  honorairesCharge HonorairesCharge?  // Nouveau — typage strict de la charge (cf. contrat API §5.6).
+  honorairesPct    Float?
+
+  // Location
+  depot           Float?
+  loyerReference  Float?
+  complementLoyer Float?
+
+  // Viager
+  bouquet Float?
+  rente   Float?
+
+  // Taxes
+  taxeFonciere   Float?
+  taxeHabitation Float?
+
+  // Investissement
+  isInvestment    Boolean @default(false)
+  currentRent     Float?
+  occupancyStatus String?
+  rentalYield     Float?
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LOCALISATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model PropertyLocation {
+  id         String   @id @default(cuid())
+  propertyId String   @unique
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  address           String
+  addressComplement String?
+  city              String
+  postalCode        String
+  department        String?
+  region            String?
+  neighborhood      String?
+  latitude          Float?
+  longitude         Float?
+  cadastralRef      String?
+
+  @@index([city])
+  @@index([postalCode])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CARACTÉRISTIQUES PHYSIQUES
+// Surfaces, pièces, étages, orientation, vue
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model PropertyCharacteristics {
+  id         String   @id @default(cuid())
+  propertyId String   @unique
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  // Surfaces
+  surface         Float
+  surfaceCarrez   Float?
+  surfaceTerrain  Float?
+  surfaceSejour   Float?
+  surfaceCuisine  Float?
+  surfaceBalcon   Float?
+  surfaceTerrasse Float?
+  surfaceJardin   Float?
+  surfaceCave     Float?
+  surfaceVeranda  Float?
+
+  // Pièces
+  rooms           Int
+  bedrooms        Int
+  bathrooms       Int
+  showerRooms     Int?
+  toilets         Int?
+  toiletsSeparate Boolean @default(false)
+
+  // Cuisine
+  kitchenType    KitchenType?
+  kitchenEquipee Boolean      @default(false)
+
+  // Étages
+  floor                Int?
+  floorIsRezDeChaussee Boolean  @default(false)
+  totalFloors          Int?
+  levelsCount          Int?     @default(1)
+
+  // Dimensions
+  ceilingHeight Float?
+
+  // Exposition et luminosité
+  orientation          Orientation?
+  orientationSecondary Orientation?
+  exposure             Exposure?
+  viewType             ViewType?
+  viewDescription      String?
+
+  // Construction
+  yearBuilt          Int?
+  constructionPeriod ConstructionPeriod?
+  renovatedYear      Int?
+  buildingType       String?
+  architectStyle     String?
+  facadeMaterial     String?
+  roofType           String?
+
+  // Sols et finitions
+  floorType           String?
+  windowType          String?
+  hasDoubleGlazing    Boolean @default(false)
+  shutterType         String?
+  hasElectricShutters Boolean @default(false)
+
+  @@index([surface])
+  @@index([rooms])
+  @@index([bedrooms])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ÉQUIPEMENTS ET AMÉNAGEMENTS
+// Extérieurs, parking, sécurité, équipements
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model PropertyAmenities {
+  id         String   @id @default(cuid())
+  propertyId String   @unique
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  // Extérieurs
+  hasBalcony     Boolean @default(false)
+  balconyCount   Int?
+  hasTerrace     Boolean @default(false)
+  terraceCount   Int?
+  hasRoofTerrace Boolean @default(false)
+  hasLoggia      Boolean @default(false)
+  hasGarden      Boolean @default(false)
+  gardenPrivate  Boolean @default(false)
+  hasVeranda     Boolean @default(false)
+  hasPatio       Boolean @default(false)
+  hasCourtyard   Boolean @default(false)
+
+  // Stationnement
+  hasParking    Boolean @default(false)
+  parkingType   String?
+  parkingSpaces Int?
+  hasGarage     Boolean @default(false)
+  garageSpaces  Int?
+  hasBox        Boolean @default(false)
+  boxCount      Int?
+
+  // Cave et rangements
+  hasCellar        Boolean @default(false)
+  cellarCount      Int?
+  hasAttic         Boolean @default(false)
+  atticAmenageable Boolean @default(false)
+  hasStorage       Boolean @default(false)
+  hasDressing      Boolean @default(false)
+  hasLaundryRoom   Boolean @default(false)
+
+  // Piscine
+  hasPool     Boolean @default(false)
+  poolType    String?
+  poolSurface Float?
+  hasTennisCourt Boolean @default(false)
+
+  // Sécurité et accès
+  hasElevator      Boolean @default(false)
+  elevatorCount    Int?
+  hasIntercom      Boolean @default(false)
+  hasDigicode      Boolean @default(false)
+  hasVideophone    Boolean @default(false)
+  hasGuardian      Boolean @default(false)
+  hasAlarm         Boolean @default(false)
+  hasSecureDoor    Boolean @default(false)
+  hasGate          Boolean @default(false)
+  hasElectricGate  Boolean @default(false)
+  isGatedCommunity Boolean @default(false)
+  accessPMR        Boolean @default(false)
+
+  // Équipements intérieurs
+  isFurnished       Boolean @default(false)
+  furnishingDetails String? @db.Text
+  hasWashingMachine Boolean @default(false)
+  hasDishwasher     Boolean @default(false)
+  hasDryer          Boolean @default(false)
+  hasFridge         Boolean @default(false)
+  hasFreezer        Boolean @default(false)
+  hasOven           Boolean @default(false)
+  hasMicrowave      Boolean @default(false)
+  hasHotPlates      Boolean @default(false)
+  hasCoffeeMachine  Boolean @default(false)
+  hasTV             Boolean @default(false)
+  hasWifi           Boolean @default(false)
+
+  // Location spécifique
+  minLeaseDuration          Int?
+  availableForStudents      Boolean @default(false)
+  availableForProfessionals Boolean @default(false)
+  petsAllowed               Boolean @default(false)
+  smokingAllowed            Boolean @default(false)
+
+  // Proximité
+  nearPublicTransport Boolean @default(false)
+  transportDetails    String?
+  nearMetro           Boolean @default(false)
+  metroLine           String?
+  metroDistance       Int?
+  nearTrain           Boolean @default(false)
+  trainStation        String?
+  trainDistance       Int?
+  nearBus             Boolean @default(false)
+  nearTram            Boolean @default(false)
+  nearShops           Boolean @default(false)
+  nearSchools         Boolean @default(false)
+  schoolDetails       String?
+  nearParks           Boolean @default(false)
+  nearSports          Boolean @default(false)
+  nearBeach           Boolean @default(false)
+  nearSkiSlopes       Boolean @default(false)
+  environmentType     String?
+  noiseLevel          String?
+
+  // Médias
+  virtualTourUrl String?
+  videoUrl       String?
+  tour3dUrl      String?
+  floorPlanUrl   String?
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ÉNERGIE, DPE ET DIAGNOSTICS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model PropertyEnergy {
+  id         String   @id @default(cuid())
+  propertyId String   @unique
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  // DPE - Données (les images sont dans PropertyDocument avec type DPE_IMAGE/GES_IMAGE)
+  energyClass            EnergyClass?
+  energyValue            Int?
+  gesClass               EnergyClass?
+  gesValue               Int?
+  dpeDate                DateTime?
+  dateReferenceEnergie   DateTime?    // Date de référence des prix de l'énergie (arrêté 2021 — distinct de `dpeDate`)
+  dpeEstimation          Boolean      @default(false)
+  annualEnergyCost       Float?
+  annualEnergyCostMin    Float?
+  annualEnergyCostMax    Float?
+
+  // Étiquettes vitrine - Métadonnées (le PDF est dans PropertyDocument avec type LABEL_PDF)
+  labelGenerated   Boolean   @default(false)
+  labelGeneratedAt DateTime?
+  labelColor       String?
+
+  // Fiches descriptives - Métadonnées (le PDF est dans PropertyDocument avec type DESCRIPTIVE_SHEET_PDF)
+  descriptiveSheetGenerated   Boolean   @default(false)
+  descriptiveSheetGeneratedAt DateTime?
+
+  // Chauffage
+  heatingType        HeatingType?
+  heatingEnergy      HeatingEnergy?
+  heatingDetails     String?
+  hasRadiator        Boolean        @default(false)
+  hasFloorHeating    Boolean        @default(false)
+  hasFireplace       Boolean        @default(false)
+  fireplaceType      String?
+  hasAirConditioning Boolean        @default(false)
+  acType             String?
+
+  // Eau chaude
+  hotWaterType HotWaterType?
+
+  // Réseaux
+  sewageType    SewageType?
+  hasFiberOptic Boolean     @default(false)
+  fiberStatus   String?
+
+  // Diagnostics obligatoires
+  hasAsbestos      Boolean?
+  asbestosDiagDate DateTime?
+  hasLead          Boolean?
+  leadDiagDate     DateTime?
+  hasTermites      Boolean?
+  termitesDiagDate DateTime?
+  elecDiagDate     DateTime?
+  elecDiagResult   String?
+  gasDiagDate      DateTime?
+  gasDiagResult    String?
+
+  // Risques
+  riskZone      String?
+  floodZone     Boolean @default(false)
+  seismicZone   Int?
+  noiseExposure String?
+
+  @@index([energyClass])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COPROPRIÉTÉ
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model PropertyCopro {
+  id         String   @id @default(cuid())
+  propertyId String   @unique
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  isInCopro            Boolean @default(false)
+  coprLots             Int?
+  coprCharges          Float?
+  coprChargesDetails   String? @db.Text
+  coprProcedure        Boolean @default(false)
+  coprProcedureDetails String? @db.Text
+  coprSyndic           String?
+  lotNumber            String?
+  tantieme             Float?
+  coprRecentWorks      String? @db.Text
+  coprFutureWorks      String? @db.Text
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// IMAGES DES BIENS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model PropertyImage {
+  id         String        @id @default(cuid())
+  url        String
+  alt        String?
+  caption    String?
+  order      Int           @default(0)
+  isMain     Boolean       @default(false)
+  category   ImageCategory @default(GENERAL)
+  width      Int?
+  height     Int?
+  size       Int?
+  propertyId String
+  property   Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdAt  DateTime      @default(now())
+
+  @@index([propertyId])
+  @@index([category])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DOCUMENTS DES BIENS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model PropertyDocument {
+  id          String       @id @default(cuid())
+  name        String
+  url         String
+  type        DocumentType
+  size        Int?
+  mimeType    String?
+  description String?
+  propertyId  String
+  property    Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([propertyId])
+  @@index([type])
+  @@index([propertyId, type])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DÉTAIL DES PIÈCES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model PropertyRoom {
+  id          String       @id @default(cuid())
+  name        String
+  type        RoomType
+  surface     Float?
+  floor       Int?
+  orientation Orientation?
+  description String?
+  order       Int          @default(0)
+  propertyId  String
+  property    Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// POINTS D'INTÉRÊT À PROXIMITÉ
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model PropertyProximity {
+  id         String        @id @default(cuid())
+  name       String
+  type       ProximityType
+  distance   Int?
+  walkTime   Int?
+  details    String?
+  propertyId String
+  property   Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([type])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DEMANDES D'ESTIMATION
+// Stocke les demandes d'estimation reçues via le formulaire public
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model Evaluation {
+  id String @id @default(cuid())
+
+  // Étape 1: Type de bien et localisation
+  propertyType String          // Type de bien (appartement, maison, villa, etc.)
+  postalCode   String          // Code postal
+  address      String?         // Adresse complète (optionnel)
+
+  // Étape 2: Surface et caractéristiques
+  surface   String?  // Surface en m²
+  levels    String?  // Nombre de niveaux
+  rooms     String?  // Nombre de pièces
+  bedrooms  String?  // Nombre de chambres
+  bathrooms String?  // Nombre de salles de bains
+
+  // Étape 3: Informations additionnelles
+  constructionYear String?  // Année de construction
+  renovations      String?  @db.Text // Description des travaux
+  hasGarage        Boolean  @default(false)
+  hasPool          Boolean  @default(false)
+  hasGarden        Boolean  @default(false)
+  hasBalcony       Boolean  @default(false)
+  hasTerrace       Boolean  @default(false)
+
+  // Étape 4: Coordonnées du demandeur
+  situation EvaluationSituation @default(RENSEIGNEMENT)
+  firstName String
+  lastName  String
+  email     String
+  phone     String?
+
+  // Phase C — champs additifs optionnels (contrat API §5.3)
+  condition PropertyCondition?          // État général déclaré (enum FR partagé avec Property)
+  timeframe String?                     // Délai envisagé (libre — ex. "3_MOIS", "6_MOIS")
+  intent    String?                     // Intention (libre — ex. "SELL", "RENT_OUT", "EXPLORATION") — parallèle à `situation`
+  message   String?          @db.Text   // Message libre du demandeur
+  rgpd      Boolean?                    // Consentement RGPD. null = non envoyé (ancien client), true/false = envoyé.
+  source    String?                     // Origine (ex. "vitrine")
+  userAgent String?
+  referer   String?
+
+  // Métadonnées
+  status    EvaluationStatus @default(NOUVELLE)
+  notes     String?          @db.Text // Notes internes de l'agent
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([email])
+  @@index([postalCode])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LEADS — FORMULAIRES DE CONTACT PUBLICS
+// Source de vérité : contrat API §3.1 (POST /api/public/contact)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model Lead {
+  id String @id @default(cuid())
+
+  // Contexte du lead
+  subject           LeadSubject
+  propertyReference String?               // Renseigné si contact depuis /bien/[ref]
+  profile           LeadProfile?
+  financing         LeadFinancing?
+  visitAvailability String[]              @default([])
+
+  // Coordonnées
+  firstName String
+  lastName  String
+  email     String
+  phone     String?
+  message   String   @db.Text
+
+  // Consentement
+  rgpd Boolean @default(false)
+
+  // Attribution / debug
+  source    String?
+  page      String?
+  userAgent String?
+  referer   String?
+
+  // Workflow interne
+  status LeadStatus @default(NOUVEAU)
+  notes  String?    @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([email])
+  @@index([subject])
+  @@index([propertyReference])
+}
