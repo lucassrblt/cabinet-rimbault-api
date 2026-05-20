@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server"
+import { LeadFinancing, LeadProfile, LeadSubject } from "@prisma/client"
+import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import { LeadSubject, LeadProfile, LeadFinancing } from "@prisma/client"
-import { prisma } from "@/lib/prisma"
 import { withPublicApiAuth } from "@/lib/api-public-auth"
-import { resend } from "@/lib/resend"
 import { contactConfirmationEmail } from "@/lib/emails/contact-confirmation"
+import { prisma } from "@/lib/prisma"
+import { resend } from "@/lib/resend"
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -49,10 +49,7 @@ export async function POST(request: NextRequest) {
           fields[issue.path.join(".")] = issue.message
         }
         const firstMessage = parsed.error.issues[0]?.message || "Validation échouée"
-        return NextResponse.json(
-          { success: false, error: firstMessage, fields },
-          { status: 400 }
-        )
+        return NextResponse.json({ success: false, error: firstMessage, fields }, { status: 400 })
       }
 
       const data = parsed.data
@@ -61,7 +58,7 @@ export async function POST(request: NextRequest) {
       if (data.consent.rgpd !== true) {
         return NextResponse.json(
           { success: false, error: "Consentement RGPD requis", code: "RGPD_REQUIRED" },
-          { status: 422 }
+          { status: 422 },
         )
       }
 
@@ -86,7 +83,8 @@ export async function POST(request: NextRequest) {
       })
 
       // Fire-and-forget email
-      prisma.agencySettings.findUnique({ where: { id: 'default' } })
+      prisma.agencySettings
+        .findUnique({ where: { id: "default" } })
         .then((settings) => {
           const email = contactConfirmationEmail({
             firstName: data.contact.firstName,
@@ -94,18 +92,18 @@ export async function POST(request: NextRequest) {
             subject: data.subject,
             propertyReference: data.propertyReference,
             message: data.contact.message,
-            agencyName: settings?.name || 'Cabinet Rimbault',
+            agencyName: settings?.name || "Cabinet Rimbault",
             agencyPhone: settings?.phone || undefined,
             agencyEmail: settings?.email || undefined,
           })
           return resend.emails.send({
-            from: process.env.AGENCY_EMAIL_FROM || 'noreply@cabinet-rimbault.fr',
+            from: process.env.AGENCY_EMAIL_FROM || "noreply@cabinet-rimbault.fr",
             to: data.contact.email,
             subject: email.subject,
             html: email.html,
           })
         })
-        .catch((err) => console.error('[Email] Failed to send contact confirmation:', err))
+        .catch((err) => console.error("[Email] Failed to send contact confirmation:", err))
 
       return NextResponse.json(
         {
@@ -116,7 +114,7 @@ export async function POST(request: NextRequest) {
             createdAt: lead.createdAt,
           },
         },
-        { status: 201 }
+        { status: 201 },
       )
     } catch (error) {
       console.error("Error creating public contact lead:", error)
@@ -131,7 +129,7 @@ export async function POST(request: NextRequest) {
                 : String(error)
               : undefined,
         },
-        { status: 500 }
+        { status: 500 },
       )
     }
   })

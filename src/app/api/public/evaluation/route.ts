@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server"
 import { PropertyCondition } from "@prisma/client"
-import { prisma } from "@/lib/prisma"
+import { type NextRequest, NextResponse } from "next/server"
 import { withPublicApiAuth } from "@/lib/api-public-auth"
-import { resend } from "@/lib/resend"
 import { evaluationConfirmationEmail } from "@/lib/emails/evaluation-confirmation"
+import { prisma } from "@/lib/prisma"
+import { resend } from "@/lib/resend"
 
 const PROPERTY_CONDITION_VALUES = Object.values(PropertyCondition) as string[]
 
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
         if (!body[field]) {
           return NextResponse.json(
             { success: false, error: `Le champ ${field} est requis` },
-            { status: 400 }
+            { status: 400 },
           )
         }
       }
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       if (!/^\d{5}$/.test(body.postalCode)) {
         return NextResponse.json(
           { success: false, error: "Le code postal doit contenir 5 chiffres" },
-          { status: 400 }
+          { status: 400 },
         )
       }
 
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       if (!emailRegex.test(body.email)) {
         return NextResponse.json(
           { success: false, error: "L'adresse email n'est pas valide" },
-          { status: 400 }
+          { status: 400 },
         )
       }
 
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       if (body.condition != null && !PROPERTY_CONDITION_VALUES.includes(body.condition)) {
         return NextResponse.json(
           { success: false, error: "La valeur de `condition` est invalide" },
-          { status: 400 }
+          { status: 400 },
         )
       }
 
@@ -100,7 +100,8 @@ export async function POST(request: NextRequest) {
       console.log("Public evaluation created successfully:", evaluation.id)
 
       // Fire-and-forget email
-      prisma.agencySettings.findUnique({ where: { id: 'default' } })
+      prisma.agencySettings
+        .findUnique({ where: { id: "default" } })
         .then((settings) => {
           const email = evaluationConfirmationEmail({
             firstName: body.firstName,
@@ -109,36 +110,44 @@ export async function POST(request: NextRequest) {
             postalCode: body.postalCode,
             surface: body.surface ? Number(body.surface) : undefined,
             rooms: body.rooms ? Number(body.rooms) : undefined,
-            agencyName: settings?.name || 'Cabinet Rimbault',
+            agencyName: settings?.name || "Cabinet Rimbault",
             agencyPhone: settings?.phone || undefined,
             agencyEmail: settings?.email || undefined,
           })
           return resend.emails.send({
-            from: process.env.AGENCY_EMAIL_FROM || 'noreply@cabinet-rimbault.fr',
+            from: process.env.AGENCY_EMAIL_FROM || "noreply@cabinet-rimbault.fr",
             to: body.email,
             subject: email.subject,
             html: email.html,
           })
         })
-        .catch((err) => console.error('[Email] Failed to send evaluation confirmation:', err))
+        .catch((err) => console.error("[Email] Failed to send evaluation confirmation:", err))
 
-      return NextResponse.json({
-        success: true,
-        message: "Votre demande d'estimation a été enregistrée avec succès",
-        data: {
-          id: evaluation.id,
-          createdAt: evaluation.createdAt,
+      return NextResponse.json(
+        {
+          success: true,
+          message: "Votre demande d'estimation a été enregistrée avec succès",
+          data: {
+            id: evaluation.id,
+            createdAt: evaluation.createdAt,
+          },
         },
-      }, { status: 201 })
+        { status: 201 },
+      )
     } catch (error) {
       console.error("Error creating public evaluation:", error)
       return NextResponse.json(
         {
           success: false,
           error: "Erreur lors de la création de la demande d'estimation",
-          details: process.env.NODE_ENV === "development" ? (error instanceof Error ? error.message : String(error)) : undefined
+          details:
+            process.env.NODE_ENV === "development"
+              ? error instanceof Error
+                ? error.message
+                : String(error)
+              : undefined,
         },
-        { status: 500 }
+        { status: 500 },
       )
     }
   })

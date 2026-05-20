@@ -33,18 +33,26 @@ export function evaluationConfirmationEmail(props: EvaluationConfirmationProps):
     `<p style="margin:0 0 4px;font-size:15px;line-height:1.5"><strong>Code postal :</strong> ${postalCode}</p>`,
   ]
   if (surface != null) {
-    propertyDetails.push(`<p style="margin:0 0 4px;font-size:15px;line-height:1.5"><strong>Surface :</strong> ${surface} m²</p>`)
+    propertyDetails.push(
+      `<p style="margin:0 0 4px;font-size:15px;line-height:1.5"><strong>Surface :</strong> ${surface} m²</p>`,
+    )
   }
   if (rooms != null) {
-    propertyDetails.push(`<p style="margin:0 0 4px;font-size:15px;line-height:1.5"><strong>Pièces :</strong> ${rooms}</p>`)
+    propertyDetails.push(
+      `<p style="margin:0 0 4px;font-size:15px;line-height:1.5"><strong>Pièces :</strong> ${rooms}</p>`,
+    )
   }
 
   const agencyContactLines: string[] = []
   if (agencyPhone) {
-    agencyContactLines.push(`<li>Téléphone : <a href="tel:${agencyPhone}" style="color:#1a56db">${agencyPhone}</a></li>`)
+    agencyContactLines.push(
+      `<li>Téléphone : <a href="tel:${agencyPhone}" style="color:#1a56db">${agencyPhone}</a></li>`,
+    )
   }
   if (agencyEmail) {
-    agencyContactLines.push(`<li>Email : <a href="mailto:${agencyEmail}" style="color:#1a56db">${agencyEmail}</a></li>`)
+    agencyContactLines.push(
+      `<li>Email : <a href="mailto:${agencyEmail}" style="color:#1a56db">${agencyEmail}</a></li>`,
+    )
   }
 
   const html = `<!DOCTYPE html>
@@ -75,18 +83,22 @@ export function evaluationConfirmationEmail(props: EvaluationConfirmationProps):
                 <tr>
                   <td style="padding:20px">
                     <p style="margin:0 0 8px;font-size:14px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px">Votre bien</p>
-                    ${propertyDetails.join('\n                    ')}
+                    ${propertyDetails.join("\n                    ")}
                   </td>
                 </tr>
               </table>
 
               <p style="margin:0 0 24px;font-size:16px;line-height:1.5">Un professionnel vous contactera dans les plus brefs délais pour organiser une visite d'estimation.</p>
 
-              ${agencyContactLines.length > 0 ? `
+              ${
+                agencyContactLines.length > 0
+                  ? `
               <p style="margin:0 0 8px;font-size:15px;font-weight:700">Nos coordonnées :</p>
               <ul style="margin:0 0 24px;padding-left:20px;font-size:15px;line-height:1.8">
-                ${agencyContactLines.join('\n                ')}
-              </ul>` : ''}
+                ${agencyContactLines.join("\n                ")}
+              </ul>`
+                  : ""
+              }
 
               <p style="margin:0;font-size:16px;line-height:1.5">Cordialement,<br /><strong>${agencyName}</strong></p>
             </td>

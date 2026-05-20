@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import type { Prisma } from "@prisma/client"
+import { type NextRequest, NextResponse } from "next/server"
 import { withPublicApiAuth } from "@/lib/api-public-auth"
 import {
-  getPublicPropertiesWhere,
   getPublicPropertiesIncludeList,
+  getPublicPropertiesWhere,
   sanitizePropertiesForPublic,
 } from "@/lib/api-public-helpers"
-import { Prisma } from "@prisma/client"
+import { prisma } from "@/lib/prisma"
 
 // GET /api/public/properties/[reference]/similar
 // Retourne jusqu'à `limit` biens similaires au bien référencé.
@@ -15,7 +15,7 @@ import { Prisma } from "@prisma/client"
 // puis juste même transactionType/propertyType.
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ reference: string }> }
+  { params }: { params: Promise<{ reference: string }> },
 ) {
   return withPublicApiAuth(request, async (req) => {
     try {
@@ -27,7 +27,7 @@ export async function GET(
       if (Number.isNaN(parsedLimit)) {
         return NextResponse.json(
           { success: false, error: "Invalid value for limit" },
-          { status: 400 }
+          { status: 400 },
         )
       }
       const limit = Math.max(1, Math.min(parsedLimit, 10))
@@ -42,20 +42,14 @@ export async function GET(
       })
 
       if (!source) {
-        return NextResponse.json(
-          { success: false, error: "Bien non trouvé" },
-          { status: 404 }
-        )
+        return NextResponse.json({ success: false, error: "Bien non trouvé" }, { status: 404 })
       }
 
       if (
         !source.isPublished ||
         !["DISPONIBLE", "SOUS_OFFRE", "SOUS_COMPROMIS"].includes(source.status)
       ) {
-        return NextResponse.json(
-          { success: false, error: "Bien non disponible" },
-          { status: 404 }
-        )
+        return NextResponse.json({ success: false, error: "Bien non disponible" }, { status: 404 })
       }
 
       const sourcePrice = source.finance?.price ?? null
@@ -83,12 +77,8 @@ export async function GET(
       const cityClause = city
         ? { location: { city: { equals: city, mode: "insensitive" as const } } }
         : undefined
-      const postalCodeClause = postalCode
-        ? { location: { postalCode } }
-        : undefined
-      const departmentClause = department
-        ? { location: { department } }
-        : undefined
+      const postalCodeClause = postalCode ? { location: { postalCode } } : undefined
+      const departmentClause = department ? { location: { department } } : undefined
 
       const tiers: Prisma.PropertyWhereInput[] = []
 
@@ -128,9 +118,7 @@ export async function GET(
         const remaining = limit - collected.length
         const excludeIds = Array.from(seen)
         const tierResults = await prisma.property.findMany({
-          where: excludeIds.length > 0
-            ? { AND: [where, { id: { notIn: excludeIds } }] }
-            : where,
+          where: excludeIds.length > 0 ? { AND: [where, { id: { notIn: excludeIds } }] } : where,
           orderBy: { createdAt: "desc" },
           take: remaining,
           include: getPublicPropertiesIncludeList(),
@@ -157,9 +145,14 @@ export async function GET(
         {
           success: false,
           error: "Erreur lors de la récupération des biens similaires",
-          details: process.env.NODE_ENV === "development" ? (error instanceof Error ? error.message : String(error)) : undefined,
+          details:
+            process.env.NODE_ENV === "development"
+              ? error instanceof Error
+                ? error.message
+                : String(error)
+              : undefined,
         },
-        { status: 500 }
+        { status: 500 },
       )
     }
   })

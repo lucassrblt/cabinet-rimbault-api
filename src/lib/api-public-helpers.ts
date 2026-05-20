@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from "@prisma/client"
+import type { Prisma, PrismaClient } from "@prisma/client"
 
 /**
  * Filtre de base pour les propriétés visibles publiquement
@@ -70,12 +70,12 @@ export async function incrementPropertyViewCount(prisma: PrismaClient, propertyI
  */
 export function sanitizePropertyForPublic<T extends Record<string, unknown>>(property: T): T {
   const sanitized = { ...property }
-  
+
   // Supprimer les notes internes
   if ("internalNotes" in sanitized) {
     delete sanitized.internalNotes
   }
-  
+
   // Supprimer les informations utilisateur
   if ("userId" in sanitized) {
     delete sanitized.userId
@@ -83,14 +83,15 @@ export function sanitizePropertyForPublic<T extends Record<string, unknown>>(pro
   if ("user" in sanitized) {
     delete sanitized.user
   }
-  
+
   return sanitized
 }
 
 /**
  * Nettoie un tableau de propriétés
  */
-export function sanitizePropertiesForPublic<T extends Record<string, unknown>>(properties: T[]): T[] {
-  return properties.map(property => sanitizePropertyForPublic(property))
+export function sanitizePropertiesForPublic<T extends Record<string, unknown>>(
+  properties: T[],
+): T[] {
+  return properties.map((property) => sanitizePropertyForPublic(property))
 }
-

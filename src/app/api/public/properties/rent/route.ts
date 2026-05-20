@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { type NextRequest, NextResponse } from "next/server"
 import { withPublicApiAuth } from "@/lib/api-public-auth"
 import {
-  getPublicPropertiesWhere,
   getPublicPropertiesIncludeList,
+  getPublicPropertiesWhere,
   sanitizePropertiesForPublic,
 } from "@/lib/api-public-helpers"
+import { prisma } from "@/lib/prisma"
 
 // GET /api/public/properties/rent - Récupérer tous les biens en location visibles
 // Query params optionnels:
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       const postalCode = searchParams.get("postalCode")
       const city = searchParams.get("city")
       const limitParam = searchParams.get("limit")
-      
+
       // Parse limit avec une valeur par défaut de 50
       const limit = limitParam ? parseInt(limitParam, 10) : 50
       const validLimit = Math.max(1, Math.min(limit, 100))
@@ -28,12 +28,14 @@ export async function GET(request: NextRequest) {
       const where = {
         ...getPublicPropertiesWhere(),
         transactionType: "LOCATION" as const,
-        ...(postalCode || city ? {
-          location: {
-            ...(postalCode ? { postalCode } : {}),
-            ...(city ? { city: { contains: city, mode: "insensitive" as const } } : {}),
-          }
-        } : {})
+        ...(postalCode || city
+          ? {
+              location: {
+                ...(postalCode ? { postalCode } : {}),
+                ...(city ? { city: { contains: city, mode: "insensitive" as const } } : {}),
+              },
+            }
+          : {}),
       }
 
       const properties = await prisma.property.findMany({
@@ -59,14 +61,18 @@ export async function GET(request: NextRequest) {
     } catch (error) {
       console.error("Error fetching rent properties:", error)
       return NextResponse.json(
-        { 
+        {
           success: false,
           error: "Erreur lors de la récupération des biens en location",
-          details: process.env.NODE_ENV === "development" ? (error instanceof Error ? error.message : String(error)) : undefined
+          details:
+            process.env.NODE_ENV === "development"
+              ? error instanceof Error
+                ? error.message
+                : String(error)
+              : undefined,
         },
-        { status: 500 }
+        { status: 500 },
       )
     }
   })
 }
-

@@ -1,19 +1,19 @@
-import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import {
+  EnergyClass,
+  type Prisma,
+  PropertyCondition,
+  type PropertyStatus,
+  PropertyType,
+  TransactionType,
+} from "@prisma/client"
+import { type NextRequest, NextResponse } from "next/server"
 import { withPublicApiAuth } from "@/lib/api-public-auth"
 import {
-  getPublicPropertiesWhere,
   getPublicPropertiesIncludeList,
+  getPublicPropertiesWhere,
   sanitizePropertiesForPublic,
 } from "@/lib/api-public-helpers"
-import {
-  Prisma,
-  TransactionType,
-  PropertyType,
-  PropertyStatus,
-  PropertyCondition,
-  EnergyClass,
-} from "@prisma/client"
+import { prisma } from "@/lib/prisma"
 
 // GET /api/public/properties - Rechercher des propriétés avec filtres
 // Query params optionnels:
@@ -66,10 +66,7 @@ function parseBoolean(value: string | null): boolean | null {
 }
 
 function badRequest(message: string) {
-  return NextResponse.json(
-    { success: false, error: message },
-    { status: 400 }
-  )
+  return NextResponse.json({ success: false, error: message }, { status: 400 })
 }
 
 export async function GET(request: NextRequest) {
@@ -205,9 +202,7 @@ export async function GET(request: NextRequest) {
       const F_G_HIDDEN: EnergyClass[] = ["A", "B", "C", "D", "E"]
       let dpeFilter: EnergyClass[] | null = null
       if (dpeValues.length > 0 && hideEnergyFG) {
-        dpeFilter = (dpeValues as EnergyClass[]).filter((d) =>
-          (F_G_HIDDEN as string[]).includes(d)
-        )
+        dpeFilter = (dpeValues as EnergyClass[]).filter((d) => (F_G_HIDDEN as string[]).includes(d))
       } else if (dpeValues.length > 0) {
         dpeFilter = dpeValues as EnergyClass[]
       } else if (hideEnergyFG) {
@@ -286,8 +281,7 @@ export async function GET(request: NextRequest) {
       // Clause energy (DPE)
       const energyClause: Prisma.PropertyEnergyWhereInput = {}
       if (dpeFilter !== null) {
-        energyClause.energyClass =
-          dpeFilter.length === 1 ? dpeFilter[0] : { in: dpeFilter }
+        energyClause.energyClass = dpeFilter.length === 1 ? dpeFilter[0] : { in: dpeFilter }
       }
       const hasEnergyFilter = Object.keys(energyClause).length > 0
 
@@ -295,9 +289,7 @@ export async function GET(request: NextRequest) {
       const where: Prisma.PropertyWhereInput = {
         // Base: isPublished + status par défaut (sauf override via statusClause)
         isPublished: true,
-        ...(statusValues.length > 0
-          ? statusClause
-          : { status: basePublicWhere.status }),
+        ...(statusValues.length > 0 ? statusClause : { status: basePublicWhere.status }),
         ...(transactionTypeRaw && { transactionType: transactionTypeRaw as TransactionType }),
         ...propertyTypeClause,
         ...(isExclusive === true && { isExclusive: true }),
@@ -386,9 +378,14 @@ export async function GET(request: NextRequest) {
         {
           success: false,
           error: "Erreur lors de la récupération des propriétés",
-          details: process.env.NODE_ENV === "development" ? (error instanceof Error ? error.message : String(error)) : undefined
+          details:
+            process.env.NODE_ENV === "development"
+              ? error instanceof Error
+                ? error.message
+                : String(error)
+              : undefined,
         },
-        { status: 500 }
+        { status: 500 },
       )
     }
   })

@@ -1,16 +1,16 @@
-import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { type NextRequest, NextResponse } from "next/server"
 import { withPublicApiAuth } from "@/lib/api-public-auth"
 import {
   getPublicPropertiesInclude,
-  sanitizePropertyForPublic,
   incrementPropertyViewCount,
+  sanitizePropertyForPublic,
 } from "@/lib/api-public-helpers"
+import { prisma } from "@/lib/prisma"
 
 // GET /api/public/properties/[reference] - Récupérer un bien par référence
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ reference: string }> }
+  { params }: { params: Promise<{ reference: string }> },
 ) {
   return withPublicApiAuth(request, async () => {
     try {
@@ -30,22 +30,25 @@ export async function GET(
 
       if (!property) {
         return NextResponse.json(
-          { 
+          {
             success: false,
-            error: "Bien non trouvé" 
+            error: "Bien non trouvé",
           },
-          { status: 404 }
+          { status: 404 },
         )
       }
 
       // Vérifier que le bien est publié et disponible
-      if (!property.isPublished || !["DISPONIBLE", "SOUS_OFFRE", "SOUS_COMPROMIS"].includes(property.status)) {
+      if (
+        !property.isPublished ||
+        !["DISPONIBLE", "SOUS_OFFRE", "SOUS_COMPROMIS"].includes(property.status)
+      ) {
         return NextResponse.json(
-          { 
+          {
             success: false,
-            error: "Bien non disponible" 
+            error: "Bien non disponible",
           },
-          { status: 404 }
+          { status: 404 },
         )
       }
 
@@ -62,14 +65,18 @@ export async function GET(
     } catch (error) {
       console.error("Error fetching property by reference:", error)
       return NextResponse.json(
-        { 
+        {
           success: false,
           error: "Erreur lors de la récupération du bien",
-          details: process.env.NODE_ENV === "development" ? (error instanceof Error ? error.message : String(error)) : undefined
+          details:
+            process.env.NODE_ENV === "development"
+              ? error instanceof Error
+                ? error.message
+                : String(error)
+              : undefined,
         },
-        { status: 500 }
+        { status: 500 },
       )
     }
   })
 }
-

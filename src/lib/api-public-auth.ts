@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 
 /**
  * Vérifie l'authentification de l'API publique via API Key
@@ -26,7 +26,7 @@ export function requirePublicApiKey(request: NextRequest): NextResponse | null {
   if (!verifyPublicApiKey(request)) {
     return NextResponse.json(
       { error: "Non autorisé - API Key invalide ou manquante" },
-      { status: 401 }
+      { status: 401 },
     )
   }
   return null
@@ -38,7 +38,7 @@ export function requirePublicApiKey(request: NextRequest): NextResponse | null {
  */
 export async function withPublicApiAuth(
   request: NextRequest,
-  handler: (request: NextRequest) => Promise<NextResponse>
+  handler: (request: NextRequest) => Promise<NextResponse>,
 ): Promise<NextResponse> {
   const authError = requirePublicApiKey(request)
   if (authError) {
@@ -46,4 +46,3 @@ export async function withPublicApiAuth(
   }
   return handler(request)
 }
-
