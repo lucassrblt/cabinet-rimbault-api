@@ -13,7 +13,6 @@ export async function POST(request: NextRequest) {
   return withPublicApiAuth(request, async (req) => {
     try {
       const body = await req.json()
-      console.log("Received public evaluation request:", JSON.stringify(body, null, 2))
 
       // Validation des champs requis
       const requiredFields = ["propertyType", "postalCode", "firstName", "lastName", "email"]
@@ -96,8 +95,6 @@ export async function POST(request: NextRequest) {
           status: "NOUVELLE",
         },
       })
-
-      console.log("Public evaluation created successfully:", evaluation.id)
 
       // Fire-and-forget email
       prisma.agencySettings
