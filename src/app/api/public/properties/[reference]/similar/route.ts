@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client"
 import { type NextRequest, NextResponse } from "next/server"
 import { withPublicApiAuth } from "@/lib/api-public-auth"
+import { DETAIL_CACHE, withCache } from "@/lib/api-public-cache"
 import {
   getPublicPropertiesIncludeList,
   getPublicPropertiesWhere,
@@ -134,11 +135,14 @@ export async function GET(
 
       const sanitized = sanitizePropertiesForPublic(collected)
 
-      return NextResponse.json({
-        success: true,
-        count: sanitized.length,
-        data: sanitized,
-      })
+      return withCache(
+        NextResponse.json({
+          success: true,
+          count: sanitized.length,
+          data: sanitized,
+        }),
+        DETAIL_CACHE,
+      )
     } catch (error) {
       console.error("Error fetching similar properties:", error)
       return NextResponse.json(

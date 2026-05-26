@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { withPublicApiAuth } from "@/lib/api-public-auth"
+import { LISTING_CACHE, withCache } from "@/lib/api-public-cache"
 import {
   getPublicPropertiesIncludeList,
   getPublicPropertiesWhere,
@@ -31,11 +32,14 @@ export async function GET(request: NextRequest) {
       // Nettoyer les données sensibles
       const sanitizedProperties = sanitizePropertiesForPublic(properties)
 
-      return NextResponse.json({
-        success: true,
-        count: sanitizedProperties.length,
-        data: sanitizedProperties,
-      })
+      return withCache(
+        NextResponse.json({
+          success: true,
+          count: sanitizedProperties.length,
+          data: sanitizedProperties,
+        }),
+        LISTING_CACHE,
+      )
     } catch (error) {
       console.error("Error fetching recent properties:", error)
 

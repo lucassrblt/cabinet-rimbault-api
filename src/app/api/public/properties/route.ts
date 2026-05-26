@@ -8,6 +8,7 @@ import {
 } from "@prisma/client"
 import { type NextRequest, NextResponse } from "next/server"
 import { withPublicApiAuth } from "@/lib/api-public-auth"
+import { LISTING_CACHE, withCache } from "@/lib/api-public-cache"
 import {
   getPublicPropertiesIncludeList,
   getPublicPropertiesWhere,
@@ -301,9 +302,6 @@ export async function GET(request: NextRequest) {
         ...(hasEnergyFilter && { energy: energyClause }),
       }
 
-      // Total
-      const total = await prisma.property.count({ where })
-
       // OrderBy
       let orderBy: Prisma.PropertyOrderByWithRelationInput
       switch (sortBy) {
@@ -327,51 +325,57 @@ export async function GET(request: NextRequest) {
           break
       }
 
-      const properties = await prisma.property.findMany({
-        where,
-        orderBy,
-        skip: validOffset,
-        take: validLimit,
-        include: getPublicPropertiesIncludeList(),
-      })
+      const [total, properties] = await Promise.all([
+        prisma.property.count({ where }),
+        prisma.property.findMany({
+          where,
+          orderBy,
+          skip: validOffset,
+          take: validLimit,
+          include: getPublicPropertiesIncludeList(),
+        }),
+      ])
 
       const sanitizedProperties = sanitizePropertiesForPublic(properties)
 
-      return NextResponse.json({
-        success: true,
-        count: sanitizedProperties.length,
-        total,
-        offset: validOffset,
-        limit: validLimit,
-        filters: {
-          ...(postalCode && { postalCode }),
-          ...(cities.length === 1 && { city: cities[0] }),
-          ...(cities.length > 1 && { city: cities }),
-          ...(transactionTypeRaw && { transactionType: transactionTypeRaw }),
-          ...(propertyTypes.length === 1 && { propertyType: propertyTypes[0] }),
-          ...(propertyTypes.length > 1 && { propertyType: propertyTypes }),
-          ...(minPrice && { minPrice: parseFloat(minPrice) }),
-          ...(maxPrice && { maxPrice: parseFloat(maxPrice) }),
-          ...(minSurface && { minSurface: parseFloat(minSurface) }),
-          ...(maxSurface && { maxSurface: parseFloat(maxSurface) }),
-          ...(bedroomsParsed !== null && { bedrooms: bedroomsParsed }),
-          ...(minBedroomsParsed !== null && { minBedrooms: minBedroomsParsed }),
-          ...(minRoomsParsed !== null && { minRooms: minRoomsParsed }),
-          ...(minFloorParsed !== null && { minFloor: minFloorParsed }),
-          ...(dpeValues.length === 1 && { dpe: dpeValues[0] }),
-          ...(dpeValues.length > 1 && { dpe: dpeValues }),
-          ...(hideEnergyFG !== null && { hideEnergyFG }),
-          ...(hasBalcony !== null && { hasBalcony }),
-          ...(hasTerrace !== null && { hasTerrace }),
-          ...(hasGarden !== null && { hasGarden }),
-          ...(isFurnished !== null && { isFurnished }),
-          ...(isExclusive !== null && { isExclusive }),
-          ...(conditionRaw && { condition: conditionRaw }),
-          ...(statusValues.length === 1 && { status: statusValues[0] }),
-          ...(statusValues.length > 1 && { status: statusValues }),
-        },
-        data: sanitizedProperties,
-      })
+      return withCache(
+        NextResponse.json({
+          success: true,
+          count: sanitizedProperties.length,
+          total,
+          offset: validOffset,
+          limit: validLimit,
+          filters: {
+            ...(postalCode && { postalCode }),
+            ...(cities.length === 1 && { city: cities[0] }),
+            ...(cities.length > 1 && { city: cities }),
+            ...(transactionTypeRaw && { transactionType: transactionTypeRaw }),
+            ...(propertyTypes.length === 1 && { propertyType: propertyTypes[0] }),
+            ...(propertyTypes.length > 1 && { propertyType: propertyTypes }),
+            ...(minPrice && { minPrice: parseFloat(minPrice) }),
+            ...(maxPrice && { maxPrice: parseFloat(maxPrice) }),
+            ...(minSurface && { minSurface: parseFloat(minSurface) }),
+            ...(maxSurface && { maxSurface: parseFloat(maxSurface) }),
+            ...(bedroomsParsed !== null && { bedrooms: bedroomsParsed }),
+            ...(minBedroomsParsed !== null && { minBedrooms: minBedroomsParsed }),
+            ...(minRoomsParsed !== null && { minRooms: minRoomsParsed }),
+            ...(minFloorParsed !== null && { minFloor: minFloorParsed }),
+            ...(dpeValues.length === 1 && { dpe: dpeValues[0] }),
+            ...(dpeValues.length > 1 && { dpe: dpeValues }),
+            ...(hideEnergyFG !== null && { hideEnergyFG }),
+            ...(hasBalcony !== null && { hasBalcony }),
+            ...(hasTerrace !== null && { hasTerrace }),
+            ...(hasGarden !== null && { hasGarden }),
+            ...(isFurnished !== null && { isFurnished }),
+            ...(isExclusive !== null && { isExclusive }),
+            ...(conditionRaw && { condition: conditionRaw }),
+            ...(statusValues.length === 1 && { status: statusValues[0] }),
+            ...(statusValues.length > 1 && { status: statusValues }),
+          },
+          data: sanitizedProperties,
+        }),
+        LISTING_CACHE,
+      )
     } catch (error) {
       console.error("Error fetching properties:", error)
       return NextResponse.json(
