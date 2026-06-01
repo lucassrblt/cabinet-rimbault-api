@@ -2,6 +2,8 @@
 
 Service Next.js (route handlers uniquement) qui sert l'API publique consommée par la vitrine `cabinet-rimbault.fr`. Extraite du back-office admin (`cabinet-rimbault-admin`) pour découpler les cycles de déploiement : l'admin peut tomber, l'API reste up, la vitrine continue de servir.
 
+🔗 **En production :** alimente [cabinet-rimbault.fr](https://cabinet-rimbault.fr) · back-office [admin.cabinet-rimbault.fr](https://admin.cabinet-rimbault.fr)
+
 ## Stack
 
 - Next.js 15 (App Router) — route handlers seuls, pas d'UI hors page d'accueil minimale.
