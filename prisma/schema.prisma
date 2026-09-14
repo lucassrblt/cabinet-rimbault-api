@@ -719,6 +719,7 @@ model PropertyEnergy {
   // DPE - Données (les images sont dans PropertyDocument avec type DPE_IMAGE/GES_IMAGE)
   energyClass            EnergyClass?
   energyValue            Int?
+  finalEnergyValue       Int?         // Consommation en énergie finale, en kWh/m².an (distincte de `energyValue`, qui est l'énergie primaire)
   gesClass               EnergyClass?
   gesValue               Int?
   dpeDate                DateTime?
