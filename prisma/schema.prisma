@@ -719,12 +719,15 @@ model PropertyEnergy {
   // DPE - Données (les images sont dans PropertyDocument avec type DPE_IMAGE/GES_IMAGE)
   energyClass            EnergyClass?
   energyValue            Int?
+  finalEnergyValue       Int?         // Consommation en énergie finale, en kWh/m².an (distincte de `energyValue`, qui est l'énergie primaire)
   gesClass               EnergyClass?
   gesValue               Int?
   dpeDate                DateTime?
   dateReferenceEnergie   DateTime?    // Date de référence des prix de l'énergie (arrêté 2021 — distinct de `dpeDate`)
   dpeEstimation          Boolean      @default(false)
-  annualEnergyCost       Float?
+  // Dépenses annuelles d'énergie estimées, abonnements compris, telles qu'elles
+  // figurent sur le DPE. Mention obligatoire dans les annonces depuis le
+  // 1er janvier 2022 (CCH, art. R126-23).
   annualEnergyCostMin    Float?
   annualEnergyCostMax    Float?
 
