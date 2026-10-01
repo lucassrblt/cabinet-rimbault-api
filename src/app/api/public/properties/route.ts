@@ -12,7 +12,7 @@ import { LISTING_CACHE, withCache } from "@/lib/api-public-cache"
 import {
   getPublicPropertiesIncludeList,
   getPublicPropertiesWhere,
-  sanitizePropertiesForPublic,
+  mapPropertiesForPublic,
 } from "@/lib/api-public-helpers"
 import { prisma } from "@/lib/prisma"
 
@@ -336,12 +336,12 @@ export async function GET(request: NextRequest) {
         }),
       ])
 
-      const sanitizedProperties = sanitizePropertiesForPublic(properties)
+      const publicProperties = mapPropertiesForPublic(properties)
 
       return withCache(
         NextResponse.json({
           success: true,
-          count: sanitizedProperties.length,
+          count: publicProperties.length,
           total,
           offset: validOffset,
           limit: validLimit,
@@ -372,7 +372,7 @@ export async function GET(request: NextRequest) {
             ...(statusValues.length === 1 && { status: statusValues[0] }),
             ...(statusValues.length > 1 && { status: statusValues }),
           },
-          data: sanitizedProperties,
+          data: publicProperties,
         }),
         LISTING_CACHE,
       )
