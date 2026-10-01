@@ -1,5 +1,11 @@
 import { PropertyCondition } from "@prisma/client"
 import { type NextRequest, NextResponse } from "next/server"
+import {
+  createPublicPostRateLimiter,
+  enforceRateLimit,
+  honeypotSuccessResponse,
+  isHoneypotFilled,
+} from "@/lib/api-public-antispam"
 import { withPublicApiAuth } from "@/lib/api-public-auth"
 import { evaluationConfirmationEmail } from "@/lib/emails/evaluation-confirmation"
 import { evaluationNotificationEmail } from "@/lib/emails/lead-notification"
@@ -9,12 +15,25 @@ import { resend } from "@/lib/resend"
 
 const PROPERTY_CONDITION_VALUES = Object.values(PropertyCondition) as string[]
 
+const SUCCESS_MESSAGE = "Votre demande d'estimation a été enregistrée avec succès"
+
+// Rate limit propre à cet endpoint (5 requêtes / 10 min / IP)
+const rateLimiter = createPublicPostRateLimiter()
+
 // POST /api/public/evaluation - Créer une nouvelle demande d'estimation
 // Protégé par X-API-Key
 export async function POST(request: NextRequest) {
   return withPublicApiAuth(request, async (req) => {
+    const rateLimited = enforceRateLimit(rateLimiter, req)
+    if (rateLimited) return rateLimited
+
     try {
       const body = await req.json()
+
+      // Honeypot : un bot a rempli le champ caché → faux succès, rien n'est enregistré ni envoyé
+      if (isHoneypotFilled(body)) {
+        return honeypotSuccessResponse(SUCCESS_MESSAGE)
+      }
 
       // Validation des champs requis
       const requiredFields = ["propertyType", "postalCode", "firstName", "lastName", "email"]
@@ -144,7 +163,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: true,
-          message: "Votre demande d'estimation a été enregistrée avec succès",
+          message: SUCCESS_MESSAGE,
           data: {
             id: evaluation.id,
             createdAt: evaluation.createdAt,

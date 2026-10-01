@@ -64,8 +64,8 @@ Tous protégés par header `X-API-Key` (sauf `/api/health`).
 | GET | `/api/public/properties/recent` | Biens récents (limit param). |
 | GET | `/api/public/properties/[reference]` | Détail bien + incrément view counter. |
 | GET | `/api/public/properties/[reference]/similar` | Biens similaires. |
-| POST | `/api/public/contact` | Crée un Lead + email de confirmation à l'expéditeur + notification à l'agence. |
-| POST | `/api/public/evaluation` | Crée une Evaluation + email de confirmation au demandeur + notification à l'agence. |
+| POST | `/api/public/contact` | Crée un Lead + email de confirmation à l'expéditeur + notification à l'agence. Anti-spam (cf. ci-dessous). |
+| POST | `/api/public/evaluation` | Crée une Evaluation + email de confirmation au demandeur + notification à l'agence. Anti-spam (cf. ci-dessous). |
 
 Toutes les réponses sont au format `{ success, data, ... }`. Les biens non publiés et les statuts internes ne sont jamais renvoyés.
 
@@ -96,6 +96,17 @@ location: {
 ```
 
 Le type TypeScript correspondant est `PublicProperty<T>` / `PublicPropertyLocation<L>`.
+
+## Anti-spam (POST contact / évaluation)
+
+Implémentation : `src/lib/rate-limit.ts` (limiteur générique) + `src/lib/api-public-antispam.ts`.
+
+- **Honeypot** : champ optionnel `website` dans le body. La vitrine doit le rendre invisible pour les humains (et l'envoyer vide). S'il est non vide, l'API répond exactement comme un succès (`201`, `{ success: true, message, data: { id, createdAt } }` avec un id factice) **sans rien enregistrer ni envoyer**.
+- **Rate limit** : 5 requêtes par 10 minutes, par IP et par endpoint (fenêtre glissante, en mémoire). Au-delà : `429` `{ success: false, error: "Trop de demandes, réessayez dans quelques minutes." }` avec header `Retry-After` (secondes). L'IP retenue est le premier IP de `X-Forwarded-For`, sinon `X-Real-IP`.
+
+⚠️ La vitrine appelle l'API **depuis son serveur** : sans précaution, toutes les demandes arrivent avec l'IP du serveur vitrine et partagent le même compteur (5 leads / 10 min pour tout le site). La vitrine doit donc transmettre l'IP du visiteur dans `X-Forwarded-For` lors de ses appels POST. L'appel étant authentifié par `X-API-Key`, ce header est considéré comme fiable.
+
+Le stockage en mémoire suffit pour une instance Railway unique ; il est remis à zéro à chaque redémarrage et ne serait pas partagé entre plusieurs instances (il faudrait alors un store partagé type Redis).
 
 ## Emails
 

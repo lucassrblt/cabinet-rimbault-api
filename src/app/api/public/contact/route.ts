@@ -1,6 +1,12 @@
 import { LeadFinancing, LeadProfile, LeadSubject } from "@prisma/client"
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
+import {
+  createPublicPostRateLimiter,
+  enforceRateLimit,
+  honeypotSuccessResponse,
+  isHoneypotFilled,
+} from "@/lib/api-public-antispam"
 import { withPublicApiAuth } from "@/lib/api-public-auth"
 import { contactConfirmationEmail } from "@/lib/emails/contact-confirmation"
 import { contactNotificationEmail } from "@/lib/emails/lead-notification"
@@ -27,6 +33,8 @@ const contactBodySchema = z.object({
   consent: z.object({
     rgpd: z.boolean(),
   }),
+  // Honeypot anti-spam (doit rester vide) — traité avant la validation
+  website: z.string().optional(),
   meta: z
     .object({
       source: z.string().optional(),
@@ -37,12 +45,25 @@ const contactBodySchema = z.object({
     .optional(),
 })
 
+const SUCCESS_MESSAGE = "Votre demande a été enregistrée avec succès"
+
+// Rate limit propre à cet endpoint (5 requêtes / 10 min / IP)
+const rateLimiter = createPublicPostRateLimiter()
+
 // POST /api/public/contact - Créer un nouveau lead (formulaire de contact vitrine)
 // Protégé par X-API-Key
 export async function POST(request: NextRequest) {
   return withPublicApiAuth(request, async (req) => {
+    const rateLimited = enforceRateLimit(rateLimiter, req)
+    if (rateLimited) return rateLimited
+
     try {
       const body = await req.json()
+
+      // Honeypot : un bot a rempli le champ caché → faux succès, rien n'est enregistré ni envoyé
+      if (isHoneypotFilled(body)) {
+        return honeypotSuccessResponse(SUCCESS_MESSAGE)
+      }
 
       const parsed = contactBodySchema.safeParse(body)
       if (!parsed.success) {
@@ -135,7 +156,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: true,
-          message: "Votre demande a été enregistrée avec succès",
+          message: SUCCESS_MESSAGE,
           data: {
             id: lead.id,
             createdAt: lead.createdAt,
