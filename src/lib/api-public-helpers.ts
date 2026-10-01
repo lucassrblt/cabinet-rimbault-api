@@ -1,4 +1,4 @@
-import type { Prisma, PrismaClient } from "@prisma/client"
+import type { DocumentType, Prisma, PrismaClient } from "@prisma/client"
 
 /**
  * Filtre de base pour les propriétés visibles publiquement
@@ -12,6 +12,29 @@ export const getPublicPropertiesWhere = (): Prisma.PropertyWhereInput => {
     },
   }
 }
+
+/**
+ * Liste blanche des types de documents exposés sur la fiche bien publique.
+ * Tout autre type (diagnostics amiante/plomb/électricité/gaz/termites, ERNMT,
+ * PV d'AG, règlement et carnet d'entretien de copropriété, fiche descriptive,
+ * AUTRE…) reste interne : ces pièces contiennent en général l'adresse exacte
+ * du bien ou des informations sur les copropriétaires.
+ *
+ * - LABEL_PDF : étiquettes énergie générées pour la vitrine
+ * - DPE : diagnostic de performance énergétique
+ * - PLAN : plans du bien
+ * - DPE_IMAGE / GES_IMAGE : images des étiquettes DPE et GES. Elles ne sont
+ *   stockées QUE dans PropertyDocument (PropertyEnergy n'a que les classes et
+ *   valeurs) ; les exclure retirerait les étiquettes, dont l'affichage est une
+ *   obligation légale.
+ */
+export const PUBLIC_DOCUMENT_TYPES: DocumentType[] = [
+  "LABEL_PDF",
+  "DPE",
+  "PLAN",
+  "DPE_IMAGE",
+  "GES_IMAGE",
+]
 
 /**
  * Options d'inclusion standard pour les propriétés publiques

@@ -4,6 +4,7 @@ import { DETAIL_CACHE, withCache } from "@/lib/api-public-cache"
 import {
   getPublicPropertiesInclude,
   incrementPropertyViewCount,
+  PUBLIC_DOCUMENT_TYPES,
   sanitizePropertyForPublic,
 } from "@/lib/api-public-helpers"
 import { prisma } from "@/lib/prisma"
@@ -21,7 +22,10 @@ export async function GET(
         where: { reference },
         include: {
           ...getPublicPropertiesInclude(),
-          documents: true,
+          // Seuls les types de la liste blanche sont exposés (cf. PUBLIC_DOCUMENT_TYPES)
+          documents: {
+            where: { type: { in: PUBLIC_DOCUMENT_TYPES } },
+          },
           rooms_details: {
             orderBy: { order: "asc" },
           },

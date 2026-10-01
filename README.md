@@ -95,6 +95,8 @@ location: {
 } | null
 ```
 
+**`documents` (fiche détail uniquement)** : seuls les types de la liste blanche `PUBLIC_DOCUMENT_TYPES` sont renvoyés — `LABEL_PDF`, `DPE`, `PLAN`, ainsi que `DPE_IMAGE` et `GES_IMAGE` (les images des étiquettes énergie ne sont stockées que dans `PropertyDocument`). Diagnostics amiante/plomb/électricité/gaz/termites, ERNMT, PV d'AG, règlement et carnet d'entretien de copropriété, `DESCRIPTIVE_SHEET_PDF` et `AUTRE` ne sont jamais exposés.
+
 Le type TypeScript correspondant est `PublicProperty<T>` / `PublicPropertyLocation<L>`.
 
 ## Anti-spam (POST contact / évaluation)
