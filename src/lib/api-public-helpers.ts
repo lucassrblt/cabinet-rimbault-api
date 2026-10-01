@@ -65,26 +65,95 @@ export async function incrementPropertyViewCount(prisma: PrismaClient, propertyI
   }
 }
 
+// Champs internes de Property jamais exposés publiquement
+const INTERNAL_PROPERTY_FIELDS = [
+  "internalNotes",
+  "userId",
+  "user",
+  "viewCount",
+  "contactCount",
+  "favoriteCount",
+  "isPublished",
+] as const
+type InternalPropertyField = (typeof INTERNAL_PROPERTY_FIELDS)[number]
+
+// Champs de localisation qui permettent d'identifier précisément le bien
+const SENSITIVE_LOCATION_FIELDS = [
+  "address",
+  "addressComplement",
+  "cadastralRef",
+  "latitude",
+  "longitude",
+] as const
+type SensitiveLocationField = (typeof SENSITIVE_LOCATION_FIELDS)[number]
+
+// Coordonnées arrondies à 2 décimales (≈ 1 km) : suffisant pour une carte de secteur,
+// insuffisant pour retrouver l'adresse exacte
+export type ApproximateCoordinates = { latitude: number; longitude: number }
+
+type LocationInput = {
+  latitude?: number | null
+  longitude?: number | null
+}
+
+export type PublicPropertyLocation<L extends LocationInput> = Omit<L, SensitiveLocationField> & {
+  approximate: ApproximateCoordinates | null
+}
+
+// `location` est `PropertyLocation | null` quand la relation est incluse : le conditionnel
+// distribue sur l'union et préserve le `null`
+type MapLocation<L> = L extends LocationInput ? PublicPropertyLocation<L> : L
+
+export type PublicProperty<T> = Omit<T, InternalPropertyField | "location"> &
+  ("location" extends keyof T ? { location: MapLocation<T["location"]> } : unknown)
+
+const roundCoordinate = (value: number) => Math.round(value * 100) / 100
+
 /**
- * Nettoie les données sensibles avant de les renvoyer à l'API publique
+ * Remplace l'adresse et les coordonnées exactes par des coordonnées approximatives
  */
-export function sanitizePropertyForPublic<T extends Record<string, unknown>>(property: T): T {
-  const sanitized = { ...property }
-
-  // Supprimer les notes internes
-  if ("internalNotes" in sanitized) {
-    delete sanitized.internalNotes
+export function sanitizeLocationForPublic<L extends LocationInput>(
+  location: L,
+): PublicPropertyLocation<L> {
+  const sanitized: Record<string, unknown> = { ...location }
+  for (const field of SENSITIVE_LOCATION_FIELDS) {
+    delete sanitized[field]
   }
 
-  // Supprimer les informations utilisateur
-  if ("userId" in sanitized) {
-    delete sanitized.userId
-  }
-  if ("user" in sanitized) {
-    delete sanitized.user
+  const { latitude, longitude } = location
+  sanitized.approximate =
+    typeof latitude === "number" &&
+    typeof longitude === "number" &&
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude)
+      ? { latitude: roundCoordinate(latitude), longitude: roundCoordinate(longitude) }
+      : null
+
+  return sanitized as PublicPropertyLocation<L>
+}
+
+/**
+ * Nettoie les données sensibles avant de les renvoyer à l'API publique :
+ * - champs internes (notes, utilisateur, compteurs, flag de publication)
+ * - adresse exacte, référence cadastrale et coordonnées précises (cf. `location.approximate`)
+ *
+ * Point de passage unique de TOUS les endpoints publics qui renvoient des biens.
+ */
+export function sanitizePropertyForPublic<T extends Record<string, unknown>>(
+  property: T,
+): PublicProperty<T> {
+  const sanitized: Record<string, unknown> = { ...property }
+
+  for (const field of INTERNAL_PROPERTY_FIELDS) {
+    delete sanitized[field]
   }
 
-  return sanitized
+  const location = sanitized.location
+  if (location && typeof location === "object") {
+    sanitized.location = sanitizeLocationForPublic(location as LocationInput)
+  }
+
+  return sanitized as PublicProperty<T>
 }
 
 /**
@@ -92,6 +161,6 @@ export function sanitizePropertyForPublic<T extends Record<string, unknown>>(pro
  */
 export function sanitizePropertiesForPublic<T extends Record<string, unknown>>(
   properties: T[],
-): T[] {
+): PublicProperty<T>[] {
   return properties.map((property) => sanitizePropertyForPublic(property))
 }

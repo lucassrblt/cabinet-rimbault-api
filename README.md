@@ -67,7 +67,35 @@ Tous protégés par header `X-API-Key` (sauf `/api/health`).
 | POST | `/api/public/contact` | Crée un Lead + email de confirmation à l'expéditeur + notification à l'agence. |
 | POST | `/api/public/evaluation` | Crée une Evaluation + email de confirmation au demandeur + notification à l'agence. |
 
-Toutes les réponses sont au format `{ success, data, ... }` avec sanitization automatique (`internalNotes`, `userId` et brouillons retirés).
+Toutes les réponses sont au format `{ success, data, ... }`. Les biens non publiés et les statuts internes ne sont jamais renvoyés.
+
+### Données exposées pour un bien
+
+Tous les endpoints qui renvoient des biens (liste, `sale`, `rent`, `recent`, détail, `similar`) passent par `sanitizePropertyForPublic` (`src/lib/api-public-helpers.ts`), point de passage unique du mapping public.
+
+**Jamais exposés :**
+
+- Champs internes de `Property` : `internalNotes`, `userId`, `user`, `viewCount`, `contactCount`, `favoriteCount`, `isPublished`.
+- Dans `location` : `address`, `addressComplement`, `cadastralRef`, `latitude`, `longitude` (l'adresse exacte d'un bien ne doit pas être publique).
+
+**`location` exposée :**
+
+```ts
+location: {
+  id: string
+  propertyId: string
+  city: string
+  postalCode: string
+  department: string | null
+  region: string | null
+  neighborhood: string | null
+  // Coordonnées arrondies à 2 décimales (≈ 1 km) pour une carte de secteur.
+  // null si le bien n'a pas de coordonnées.
+  approximate: { latitude: number; longitude: number } | null
+} | null
+```
+
+Le type TypeScript correspondant est `PublicProperty<T>` / `PublicPropertyLocation<L>`.
 
 ## Emails
 
