@@ -45,8 +45,10 @@ Cf. `.env.example` pour la liste complète.
 |---|---|---|
 | `DATABASE_URL` | oui | URL pooled Supabase Postgres (même que l'admin). |
 | `PUBLIC_API_KEY` | oui | Clé X-API-Key attendue dans les requêtes. Doit matcher la valeur configurée côté vitrine. |
-| `RESEND_API_KEY` | non | Si absent, les emails sont silencieusement skip. |
+| `RESEND_API_KEY` | non | Si absent, aucun email n'est envoyé (warning dans les logs). |
 | `AGENCY_EMAIL_FROM` | non | Expéditeur Resend vérifié (ex. `Cabinet Rimbault <contact@cabinet-rimbault.fr>`). |
+| `AGENCY_NOTIFICATION_EMAIL` | non | Destinataire des notifications de leads (contact + estimation). Si absent : `AgencySettings.email` (paramètres de l'agence dans l'admin). Si aucun des deux n'est renseigné, la notification n'est pas envoyée et une erreur est loggée. |
+| `PROPERTY_PAGE_URL_TEMPLATE` | non | Gabarit d'URL de la fiche bien sur la vitrine, ex. `https://cabinet-rimbault.fr/bien/{reference}`. Sert au lien dans la notification agence ; si absent, seule la référence est indiquée. |
 | `CORS_ALLOWED_ORIGINS` | non | Origines additionnelles (séparées par virgules). Les origines vitrine prod + localhost sont déjà whitelistées par défaut dans `src/middleware.ts`. |
 
 ## Endpoints
@@ -62,10 +64,19 @@ Tous protégés par header `X-API-Key` (sauf `/api/health`).
 | GET | `/api/public/properties/recent` | Biens récents (limit param). |
 | GET | `/api/public/properties/[reference]` | Détail bien + incrément view counter. |
 | GET | `/api/public/properties/[reference]/similar` | Biens similaires. |
-| POST | `/api/public/contact` | Crée un Lead + email Resend. |
-| POST | `/api/public/evaluation` | Crée une Evaluation + email Resend. |
+| POST | `/api/public/contact` | Crée un Lead + email de confirmation à l'expéditeur + notification à l'agence. |
+| POST | `/api/public/evaluation` | Crée une Evaluation + email de confirmation au demandeur + notification à l'agence. |
 
 Toutes les réponses sont au format `{ success, data, ... }` avec sanitization automatique (`internalNotes`, `userId` et brouillons retirés).
+
+## Emails
+
+Chaque lead (contact ou estimation) déclenche deux envois Resend, en fire-and-forget (la réponse HTTP n'attend pas l'envoi, un échec n'impacte pas la création du lead) :
+
+1. **Confirmation** à l'internaute (`src/lib/emails/*-confirmation.tsx`).
+2. **Notification à l'agence** (`src/lib/emails/lead-notification.ts`) : type de demande, référence + titre du bien (avec lien si `PROPERTY_PAGE_URL_TEMPLATE` est défini), coordonnées, message et, pour une estimation, les caractéristiques saisies. Envoyée à `AGENCY_NOTIFICATION_EMAIL` (sinon `AgencySettings.email`) avec `replyTo` = email de l'internaute : l'agent répond directement depuis sa messagerie.
+
+Les échecs sont loggés avec le préfixe `[Email]` (et l'id du lead pour la notification).
 
 ## Schéma Prisma — règle d'or
 

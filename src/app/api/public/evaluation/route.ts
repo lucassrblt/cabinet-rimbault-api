@@ -2,6 +2,8 @@ import { PropertyCondition } from "@prisma/client"
 import { type NextRequest, NextResponse } from "next/server"
 import { withPublicApiAuth } from "@/lib/api-public-auth"
 import { evaluationConfirmationEmail } from "@/lib/emails/evaluation-confirmation"
+import { evaluationNotificationEmail } from "@/lib/emails/lead-notification"
+import { sendAgencyNotification } from "@/lib/emails/send-agency-notification"
 import { prisma } from "@/lib/prisma"
 import { resend } from "@/lib/resend"
 
@@ -96,9 +98,10 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      // Fire-and-forget email
-      prisma.agencySettings
-        .findUnique({ where: { id: "default" } })
+      // Fire-and-forget emails : confirmation au demandeur + notification à l'agence
+      const settingsPromise = prisma.agencySettings.findUnique({ where: { id: "default" } })
+
+      settingsPromise
         .then((settings) => {
           const email = evaluationConfirmationEmail({
             firstName: body.firstName,
@@ -119,6 +122,24 @@ export async function POST(request: NextRequest) {
           })
         })
         .catch((err) => console.error("[Email] Failed to send evaluation confirmation:", err))
+
+      settingsPromise
+        .then((settings) => {
+          const email = evaluationNotificationEmail({ evaluation })
+          return sendAgencyNotification({
+            kind: "evaluation",
+            settingsEmail: settings?.email,
+            replyTo: evaluation.email,
+            subject: email.subject,
+            html: email.html,
+          })
+        })
+        .catch((err) =>
+          console.error(
+            `[Email] Échec de la notification agence (evaluation ${evaluation.id}):`,
+            err,
+          ),
+        )
 
       return NextResponse.json(
         {
