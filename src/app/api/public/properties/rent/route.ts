@@ -4,7 +4,7 @@ import { LISTING_CACHE, withCache } from "@/lib/api-public-cache"
 import {
   getPublicPropertiesIncludeList,
   getPublicPropertiesWhere,
-  sanitizePropertiesForPublic,
+  mapPropertiesForPublic,
 } from "@/lib/api-public-helpers"
 import { prisma } from "@/lib/prisma"
 
@@ -47,18 +47,18 @@ export async function GET(request: NextRequest) {
       })
 
       // Nettoyer les données sensibles
-      const sanitizedProperties = sanitizePropertiesForPublic(properties)
+      const publicProperties = mapPropertiesForPublic(properties)
 
       return withCache(
         NextResponse.json({
           success: true,
-          count: sanitizedProperties.length,
+          count: publicProperties.length,
           filters: {
             transactionType: "LOCATION",
             ...(postalCode && { postalCode }),
             ...(city && { city }),
           },
-          data: sanitizedProperties,
+          data: publicProperties,
         }),
         LISTING_CACHE,
       )

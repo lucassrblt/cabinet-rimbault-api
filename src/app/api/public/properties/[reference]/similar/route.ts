@@ -5,7 +5,7 @@ import { DETAIL_CACHE, withCache } from "@/lib/api-public-cache"
 import {
   getPublicPropertiesIncludeList,
   getPublicPropertiesWhere,
-  sanitizePropertiesForPublic,
+  mapPropertiesForPublic,
 } from "@/lib/api-public-helpers"
 import { prisma } from "@/lib/prisma"
 
@@ -133,13 +133,13 @@ export async function GET(
         }
       }
 
-      const sanitized = sanitizePropertiesForPublic(collected)
+      const publicProperties = mapPropertiesForPublic(collected)
 
       return withCache(
         NextResponse.json({
           success: true,
-          count: sanitized.length,
-          data: sanitized,
+          count: publicProperties.length,
+          data: publicProperties,
         }),
         DETAIL_CACHE,
       )

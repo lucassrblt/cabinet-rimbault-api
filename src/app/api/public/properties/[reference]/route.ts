@@ -4,7 +4,7 @@ import { DETAIL_CACHE, withCache } from "@/lib/api-public-cache"
 import {
   getPublicPropertiesInclude,
   incrementPropertyViewCount,
-  sanitizePropertyForPublic,
+  mapPropertyForPublic,
 } from "@/lib/api-public-helpers"
 import { prisma } from "@/lib/prisma"
 
@@ -21,6 +21,9 @@ export async function GET(
         where: { reference },
         include: {
           ...getPublicPropertiesInclude(),
+          // La vue détail a besoin de TOUS les documents (diagnostics, plans)
+          // pour sa liste de téléchargements ; mapPropertyForPublic en retire
+          // ensuite les étiquettes DPE/GES, remontées dans `energy`.
           documents: true,
           rooms_details: {
             orderBy: { order: "asc" },
@@ -56,13 +59,14 @@ export async function GET(
       // Incrémenter le compteur de vues (sans attendre)
       incrementPropertyViewCount(prisma, property.id)
 
-      // Nettoyer les données sensibles
-      const sanitizedProperty = sanitizePropertyForPublic(property)
+      // Retirer les données internes, aplatir les étiquettes énergie et
+      // ne garder que les vrais documents à télécharger
+      const publicProperty = mapPropertyForPublic(property)
 
       return withCache(
         NextResponse.json({
           success: true,
-          data: sanitizedProperty,
+          data: publicProperty,
         }),
         DETAIL_CACHE,
       )
