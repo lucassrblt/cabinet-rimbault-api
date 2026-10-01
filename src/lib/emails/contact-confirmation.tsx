@@ -1,3 +1,5 @@
+import { escapeHtml } from "@/lib/emails/html"
+
 interface ContactConfirmationProps {
   firstName: string
   lastName: string
@@ -14,17 +16,28 @@ export function contactConfirmationEmail(props: ContactConfirmationProps): {
   html: string
 } {
   const {
-    firstName,
-    lastName,
-    subject,
-    propertyReference,
-    message,
-    agencyName,
-    agencyPhone,
-    agencyEmail,
+    firstName: rawFirstName,
+    lastName: rawLastName,
+    subject: rawSubject,
+    propertyReference: rawPropertyReference,
+    message: rawMessage,
+    agencyName: rawAgencyName,
+    agencyPhone: rawAgencyPhone,
+    agencyEmail: rawAgencyEmail,
   } = props
 
-  const emailSubject = `Votre demande concernant ${propertyReference || "un bien"} a bien été reçue`
+  // Toutes les valeurs interpolées dans le HTML sont échappées (saisies utilisateur)
+  const firstName = escapeHtml(rawFirstName)
+  const lastName = escapeHtml(rawLastName)
+  const subject = escapeHtml(rawSubject)
+  const propertyReference = rawPropertyReference ? escapeHtml(rawPropertyReference) : undefined
+  const message = escapeHtml(rawMessage)
+  const agencyName = escapeHtml(rawAgencyName)
+  const agencyPhone = rawAgencyPhone ? escapeHtml(rawAgencyPhone) : undefined
+  const agencyEmail = rawAgencyEmail ? escapeHtml(rawAgencyEmail) : undefined
+
+  // Objet de l'e-mail en texte brut (non HTML) : valeur non échappée
+  const emailSubject = `Votre demande concernant ${rawPropertyReference || "un bien"} a bien été reçue`
 
   const agencyContactLines: string[] = []
   if (agencyPhone) {
@@ -43,7 +56,7 @@ export function contactConfirmationEmail(props: ContactConfirmationProps): {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${emailSubject}</title>
+  <title>${escapeHtml(emailSubject)}</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;color:#18181b">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:32px 16px">

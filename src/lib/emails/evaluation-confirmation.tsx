@@ -1,3 +1,5 @@
+import { escapeHtml } from "@/lib/emails/html"
+
 interface EvaluationConfirmationProps {
   firstName: string
   lastName: string
@@ -15,16 +17,27 @@ export function evaluationConfirmationEmail(props: EvaluationConfirmationProps):
   html: string
 } {
   const {
-    firstName,
-    lastName,
-    propertyType,
-    postalCode,
-    surface,
-    rooms,
-    agencyName,
-    agencyPhone,
-    agencyEmail,
+    firstName: rawFirstName,
+    lastName: rawLastName,
+    propertyType: rawPropertyType,
+    postalCode: rawPostalCode,
+    surface: rawSurface,
+    rooms: rawRooms,
+    agencyName: rawAgencyName,
+    agencyPhone: rawAgencyPhone,
+    agencyEmail: rawAgencyEmail,
   } = props
+
+  // Toutes les valeurs interpolées dans le HTML sont échappées (saisies utilisateur)
+  const firstName = escapeHtml(rawFirstName)
+  const lastName = escapeHtml(rawLastName)
+  const propertyType = escapeHtml(rawPropertyType)
+  const postalCode = escapeHtml(rawPostalCode)
+  const surface = rawSurface != null ? escapeHtml(String(rawSurface)) : undefined
+  const rooms = rawRooms != null ? escapeHtml(String(rawRooms)) : undefined
+  const agencyName = escapeHtml(rawAgencyName)
+  const agencyPhone = rawAgencyPhone ? escapeHtml(rawAgencyPhone) : undefined
+  const agencyEmail = rawAgencyEmail ? escapeHtml(rawAgencyEmail) : undefined
 
   const emailSubject = "Votre demande d'estimation a bien été reçue"
 

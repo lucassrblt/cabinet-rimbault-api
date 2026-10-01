@@ -1,4 +1,5 @@
 import type { Evaluation, Lead } from "@prisma/client"
+import { escapeHtml } from "@/lib/emails/html"
 
 /**
  * E-mails de notification envoyés à l'agence à chaque lead entrant
@@ -49,15 +50,6 @@ const EVALUATION_SITUATION_LABELS: Record<string, string> = {
 }
 
 // ─── Helpers de rendu ──────────────────────────────────────────────────────────
-
-export function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;")
-}
 
 function label(map: Record<string, string>, value: string | null | undefined): string | null {
   if (!value) return null
