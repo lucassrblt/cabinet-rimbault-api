@@ -1,122 +1,118 @@
-interface EvaluationConfirmationProps {
-  firstName: string
-  lastName: string
-  propertyType: string
-  postalCode: string
-  surface?: number
-  rooms?: number
-  agencyName: string
-  agencyPhone?: string
-  agencyEmail?: string
+/**
+ * Accusé de réception envoyé au demandeur d'une estimation.
+ * Aucun délai ni engagement non validé par le cabinet (brief §6.2, §10).
+ */
+
+import type { AgencyInfo } from "./agency"
+import type { EvaluationForEmail } from "./evaluation-agent-notification"
+import {
+  escapeHtml,
+  formatRooms,
+  formatSurface,
+  intentKey,
+  intentLabel,
+  oneLine,
+  propertyTypeLabel,
+  telHref,
+  text,
+} from "./format"
+import {
+  contentTable,
+  heading1,
+  keepEmailWord,
+  link,
+  paragraph,
+  type RenderedEmail,
+  type Row,
+  renderDocument,
+  rowsTable,
+  section,
+  textRows,
+  textSection,
+  wordmark,
+} from "./layout"
+
+const INTENT_PHRASES: Record<string, string> = {
+  ESTIMATION_VENTE: "votre demande d’estimation du prix de vente",
+  ESTIMATION_LOYER: "votre demande d’estimation du loyer",
 }
 
-export function evaluationConfirmationEmail(props: EvaluationConfirmationProps): {
-  subject: string
-  html: string
-} {
-  const {
-    firstName,
-    lastName,
-    propertyType,
-    postalCode,
-    surface,
-    rooms,
-    agencyName,
-    agencyPhone,
-    agencyEmail,
-  } = props
+export function evaluationConfirmationEmail(
+  e: EvaluationForEmail,
+  agency: AgencyInfo,
+): RenderedEmail {
+  const subject = "Votre demande d’estimation est bien arrivée"
+  const firstName = oneLine(e.firstName)
+  const intent = intentKey(e.intent)
+  const what = (intent && INTENT_PHRASES[intent]) || "votre demande d’estimation"
+  const thanks = firstName ? `Merci, ${firstName}.` : "Merci."
+  const received = `${thanks} Nous avons bien reçu ${what}.`
+  const next = "Nous vous recontactons pour convenir d’une visite du bien."
 
-  const emailSubject = "Votre demande d'estimation a bien été reçue"
-
-  const propertyDetails: string[] = [
-    `<p style="margin:0 0 4px;font-size:15px;line-height:1.5"><strong>Type de bien :</strong> ${propertyType}</p>`,
-    `<p style="margin:0 0 4px;font-size:15px;line-height:1.5"><strong>Code postal :</strong> ${postalCode}</p>`,
+  const rows: Row[] = [
+    { label: "Objet", value: intentLabel(e.intent) },
+    { label: "Type de bien", value: propertyTypeLabel(e.propertyType) },
+    { label: "Adresse", value: text(e.address) },
+    { label: "Code postal", value: text(e.postalCode) },
+    { label: "Surface habitable", value: formatSurface(e.surface) },
+    { label: "Pièces", value: formatRooms(e.rooms) },
   ]
-  if (surface != null) {
-    propertyDetails.push(
-      `<p style="margin:0 0 4px;font-size:15px;line-height:1.5"><strong>Surface :</strong> ${surface} m²</p>`,
-    )
-  }
-  if (rooms != null) {
-    propertyDetails.push(
-      `<p style="margin:0 0 4px;font-size:15px;line-height:1.5"><strong>Pièces :</strong> ${rooms}</p>`,
-    )
-  }
 
-  const agencyContactLines: string[] = []
-  if (agencyPhone) {
-    agencyContactLines.push(
-      `<li>Téléphone : <a href="tel:${agencyPhone}" style="color:#1a56db">${agencyPhone}</a></li>`,
-    )
-  }
-  if (agencyEmail) {
-    agencyContactLines.push(
-      `<li>Email : <a href="mailto:${agencyEmail}" style="color:#1a56db">${agencyEmail}</a></li>`,
-    )
-  }
+  const phoneHref = telHref(agency.phone)
+  const questionHtml =
+    agency.phone && phoneHref
+      ? `Une question d’ici là ? Appelez-nous au ${link(phoneHref, agency.phone)}${agency.email ? " ou répondez à cet e-mail" : ""}.`
+      : agency.email
+        ? "Une question d’ici là ? Répondez simplement à cet e-mail."
+        : null
+  const questionText =
+    agency.phone && phoneHref
+      ? `Une question d’ici là ? Appelez-nous au ${agency.phone}${agency.email ? " ou répondez à cet e-mail" : ""}.`
+      : agency.email
+        ? "Une question d’ici là ? Répondez simplement à cet e-mail."
+        : null
 
-  const html = `<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${emailSubject}</title>
-</head>
-<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;color:#18181b">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:32px 16px">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;width:100%">
-          <!-- Header -->
-          <tr>
-            <td style="background-color:#1e3a5f;padding:24px 32px">
-              <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700">${agencyName}</h1>
-            </td>
-          </tr>
-          <!-- Body -->
-          <tr>
-            <td style="padding:32px">
-              <p style="margin:0 0 16px;font-size:16px;line-height:1.5">Bonjour ${firstName} ${lastName},</p>
-              <p style="margin:0 0 16px;font-size:16px;line-height:1.5">Nous avons bien reçu votre demande d'estimation et nous vous en remercions.</p>
+  const rights = `Vos informations servent uniquement à vous recontacter au sujet de cette demande. Vous pouvez en demander la rectification ou la suppression à tout moment${agency.email ? ` en écrivant à ${agency.email}` : ""}.`
 
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb;border-radius:6px;margin:0 0 24px">
-                <tr>
-                  <td style="padding:20px">
-                    <p style="margin:0 0 8px;font-size:14px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px">Votre bien</p>
-                    ${propertyDetails.join("\n                    ")}
-                  </td>
-                </tr>
-              </table>
+  const html = renderDocument({
+    title: subject,
+    header: wordmark(agency.name, null),
+    content: contentTable(
+      [heading1("Votre demande est bien arrivée."), paragraph(escapeHtml(received))].join("\n"),
+      [
+        section("Votre demande", rowsTable(rows)),
+        section(
+          "La suite",
+          [
+            paragraph(escapeHtml(next)),
+            questionHtml ? paragraph(keepEmailWord(questionHtml)) : "",
+            paragraph(escapeHtml(agency.name)),
+          ].join("\n"),
+        ),
+      ],
+    ),
+    footer: [
+      escapeHtml(rights),
+      agency.address ? escapeHtml(`${agency.name}, ${agency.address}`) : "",
+    ]
+      .filter(Boolean)
+      .join("<br /><br />"),
+  })
 
-              <p style="margin:0 0 24px;font-size:16px;line-height:1.5">Un professionnel vous contactera dans les plus brefs délais pour organiser une visite d'estimation.</p>
+  const textBody = [
+    "Votre demande est bien arrivée.",
+    received,
+    "",
+    textSection("Votre demande", textRows(rows)),
+    "",
+    textSection("La suite", [next, questionText, agency.name].filter(Boolean).join("\n")),
+    "",
+    "-- ",
+    rights,
+    agency.address ? `${agency.name}, ${agency.address}` : null,
+  ]
+    .filter((line) => line !== null)
+    .join("\n")
 
-              ${
-                agencyContactLines.length > 0
-                  ? `
-              <p style="margin:0 0 8px;font-size:15px;font-weight:700">Nos coordonnées :</p>
-              <ul style="margin:0 0 24px;padding-left:20px;font-size:15px;line-height:1.8">
-                ${agencyContactLines.join("\n                ")}
-              </ul>`
-                  : ""
-              }
-
-              <p style="margin:0;font-size:16px;line-height:1.5">Cordialement,<br /><strong>${agencyName}</strong></p>
-            </td>
-          </tr>
-          <!-- Footer -->
-          <tr>
-            <td style="padding:20px 32px;background-color:#f9fafb;border-top:1px solid #e5e7eb">
-              <p style="margin:0;font-size:12px;line-height:1.5;color:#9ca3af;text-align:center">
-                Conformément au RGPD, vous disposez d'un droit d'accès, de rectification et de suppression de vos données.
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`
-
-  return { subject: emailSubject, html }
+  return { subject, html, text: textBody }
 }
