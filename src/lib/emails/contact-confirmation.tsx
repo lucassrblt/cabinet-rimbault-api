@@ -1,108 +1,117 @@
-interface ContactConfirmationProps {
-  firstName: string
-  lastName: string
-  subject: string
-  propertyReference?: string
-  message: string
-  agencyName: string
-  agencyPhone?: string
-  agencyEmail?: string
+/**
+ * Accusé de réception envoyé à la personne qui a écrit par le formulaire de
+ * contact. Aucun délai ni engagement non validé par le cabinet.
+ */
+
+import type { AgencyInfo } from "./agency"
+import type { LeadForEmail } from "./contact-agent-notification"
+import { boundSubject, escapeHtml, oneLine, telHref, text } from "./format"
+import {
+  contentTable,
+  heading1,
+  keepEmailWord,
+  link,
+  paragraph,
+  quoteBlock,
+  type RenderedEmail,
+  type Row,
+  renderDocument,
+  rowsTable,
+  section,
+  textRows,
+  textSection,
+  wordmark,
+} from "./layout"
+
+/** Objet du message, tel que le visiteur l'a choisi. */
+const SUBJECT_LABELS: Record<string, string> = {
+  BIEN_SALE: "Un bien en vente",
+  BIEN_RENT: "Un bien en location",
+  ESTIMATION: "Une estimation",
+  APPOINTMENT: "Un rendez-vous",
+  OTHER: "Une question",
 }
 
-export function contactConfirmationEmail(props: ContactConfirmationProps): {
-  subject: string
-  html: string
-} {
-  const {
-    firstName,
-    lastName,
-    subject,
-    propertyReference,
-    message,
-    agencyName,
-    agencyPhone,
-    agencyEmail,
-  } = props
+export function contactConfirmationEmail(lead: LeadForEmail, agency: AgencyInfo): RenderedEmail {
+  const reference = oneLine(lead.propertyReference)
+  const subject = boundSubject(
+    reference
+      ? `Votre message au sujet du bien ${reference} est bien arrivé`
+      : "Votre message est bien arrivé",
+  )
+  const firstName = oneLine(lead.firstName)
+  const thanks = firstName ? `Merci, ${firstName}.` : "Merci."
+  const received = `${thanks} Nous avons bien reçu votre message${reference ? ` au sujet du bien ${reference}` : ""} et nous vous répondrons personnellement.`
+  const message = text(lead.message)
 
-  const emailSubject = `Votre demande concernant ${propertyReference || "un bien"} a bien été reçue`
+  const rows: Row[] = [
+    { label: "Objet", value: SUBJECT_LABELS[lead.subject] ?? SUBJECT_LABELS.OTHER },
+    { label: "Référence du bien", value: reference },
+  ]
 
-  const agencyContactLines: string[] = []
-  if (agencyPhone) {
-    agencyContactLines.push(
-      `<li>Téléphone : <a href="tel:${agencyPhone}" style="color:#1a56db">${agencyPhone}</a></li>`,
-    )
-  }
-  if (agencyEmail) {
-    agencyContactLines.push(
-      `<li>Email : <a href="mailto:${agencyEmail}" style="color:#1a56db">${agencyEmail}</a></li>`,
-    )
-  }
+  // « Nous joindre » : téléphone et, si le cabinet a une adresse e-mail (`replyTo`
+  // de l'accusé), invitation à répondre. Ni l'un ni l'autre : pas de section.
+  const phoneHref = telHref(agency.phone)
+  const replyHint = agency.email ? " ou répondez à cet e-mail" : ""
+  const reachHtml =
+    agency.phone && phoneHref
+      ? `Pour nous joindre directement : ${link(phoneHref, agency.phone)}${replyHint}.`
+      : agency.email
+        ? "Pour nous écrire, répondez simplement à cet e-mail."
+        : null
+  const reachText =
+    agency.phone && phoneHref
+      ? `Pour nous joindre directement : ${agency.phone}${replyHint}.`
+      : agency.email
+        ? "Pour nous écrire, répondez simplement à cet e-mail."
+        : null
 
-  const html = `<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${emailSubject}</title>
-</head>
-<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;color:#18181b">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:32px 16px">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;width:100%">
-          <!-- Header -->
-          <tr>
-            <td style="background-color:#1e3a5f;padding:24px 32px">
-              <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700">${agencyName}</h1>
-            </td>
-          </tr>
-          <!-- Body -->
-          <tr>
-            <td style="padding:32px">
-              <p style="margin:0 0 16px;font-size:16px;line-height:1.5">Bonjour ${firstName} ${lastName},</p>
-              <p style="margin:0 0 16px;font-size:16px;line-height:1.5">Nous avons bien reçu votre demande et nous vous en remercions.</p>
+  const rights = `Vos informations servent uniquement à vous répondre. Vous pouvez en demander la rectification ou la suppression à tout moment${agency.email ? ` en écrivant à ${agency.email}` : ""}.`
 
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb;border-radius:6px;margin:0 0 24px">
-                <tr>
-                  <td style="padding:20px">
-                    <p style="margin:0 0 8px;font-size:14px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px">Récapitulatif</p>
-                    <p style="margin:0 0 4px;font-size:15px;line-height:1.5"><strong>Objet :</strong> ${subject}</p>
-                    ${propertyReference ? `<p style="margin:0 0 4px;font-size:15px;line-height:1.5"><strong>Référence du bien :</strong> ${propertyReference}</p>` : ""}
-                    <p style="margin:12px 0 4px;font-size:14px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px">Votre message</p>
-                    <blockquote style="margin:4px 0 0;padding:12px 16px;border-left:3px solid #d1d5db;color:#374151;font-size:14px;line-height:1.6;white-space:pre-wrap">${message}</blockquote>
-                  </td>
-                </tr>
-              </table>
+  const html = renderDocument({
+    title: subject,
+    header: wordmark(agency.name, null),
+    content: contentTable(
+      [heading1("Votre message est bien arrivé."), paragraph(escapeHtml(received))].join("\n"),
+      [
+        section(
+          "Votre message",
+          [
+            rowsTable(rows),
+            message
+              ? `<div style="height:16px;line-height:16px;font-size:0">&nbsp;</div>${quoteBlock(message)}`
+              : "",
+          ].join("\n"),
+        ),
+        reachHtml
+          ? section(
+              "Nous joindre",
+              [paragraph(keepEmailWord(reachHtml)), paragraph(escapeHtml(agency.name))].join("\n"),
+            )
+          : "",
+      ].filter(Boolean),
+    ),
+    footer: [
+      escapeHtml(rights),
+      agency.address ? escapeHtml(`${agency.name}, ${agency.address}`) : "",
+    ]
+      .filter(Boolean)
+      .join("<br /><br />"),
+  })
 
-              <p style="margin:0 0 24px;font-size:16px;line-height:1.5">Un professionnel vous contactera dans les plus brefs délais.</p>
+  const textBody = [
+    "Votre message est bien arrivé.",
+    received,
+    "",
+    textSection("Votre message", [textRows(rows), "", message ?? ""].join("\n")),
+    "",
+    ...(reachText ? [textSection("Nous joindre", `${reachText}\n${agency.name}`), ""] : []),
+    "-- ",
+    rights,
+    agency.address ? `${agency.name}, ${agency.address}` : null,
+  ]
+    .filter((line) => line !== null)
+    .join("\n")
 
-              ${
-                agencyContactLines.length > 0
-                  ? `
-              <p style="margin:0 0 8px;font-size:15px;font-weight:700">Nos coordonnées :</p>
-              <ul style="margin:0 0 24px;padding-left:20px;font-size:15px;line-height:1.8">
-                ${agencyContactLines.join("\n                ")}
-              </ul>`
-                  : ""
-              }
-
-              <p style="margin:0;font-size:16px;line-height:1.5">Cordialement,<br /><strong>${agencyName}</strong></p>
-            </td>
-          </tr>
-          <!-- Footer -->
-          <tr>
-            <td style="padding:20px 32px;background-color:#f9fafb;border-top:1px solid #e5e7eb">
-              <p style="margin:0;font-size:12px;line-height:1.5;color:#9ca3af;text-align:center">
-                Conformément au RGPD, vous disposez d'un droit d'accès, de rectification et de suppression de vos données.
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`
-
-  return { subject: emailSubject, html }
+  return { subject, html, text: textBody }
 }

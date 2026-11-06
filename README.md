@@ -45,8 +45,10 @@ Cf. `.env.example` pour la liste complète.
 |---|---|---|
 | `DATABASE_URL` | oui | URL pooled Supabase Postgres (même que l'admin). |
 | `PUBLIC_API_KEY` | oui | Clé X-API-Key attendue dans les requêtes. Doit matcher la valeur configurée côté vitrine. |
-| `RESEND_API_KEY` | non | Si absent, les emails sont silencieusement skip. |
+| `RESEND_API_KEY` | non | Si absent, aucun e-mail n'est envoyé (accusé : avertissement `[Email]` ; notification à l'agent : `console.error` `[Email][ALERTE]`) ; les demandes sont quand même enregistrées. |
 | `AGENCY_EMAIL_FROM` | non | Expéditeur Resend vérifié (ex. `Cabinet Rimbault <contact@cabinet-rimbault.fr>`). |
+| `AGENCY_NOTIFICATION_EMAIL` | recommandée | Boîte qui reçoit la notification de chaque demande (estimation, contact). À défaut : `AgencySettings.email` (admin). Sans l'une ni l'autre : notification non envoyée, alerte `[Email][ALERTE]` dans les logs. |
+| `ADMIN_URL` | non | Racine de l'admin pour le lien « Ouvrir dans l'admin » (défaut `https://admin.cabinet-rimbault.fr`). |
 | `CORS_ALLOWED_ORIGINS` | non | Origines additionnelles (séparées par virgules). Les origines vitrine prod + localhost sont déjà whitelistées par défaut dans `src/middleware.ts`. |
 
 ## Endpoints
@@ -62,10 +64,36 @@ Tous protégés par header `X-API-Key` (sauf `/api/health`).
 | GET | `/api/public/properties/recent` | Biens récents (limit param). |
 | GET | `/api/public/properties/[reference]` | Détail bien + incrément view counter. |
 | GET | `/api/public/properties/[reference]/similar` | Biens similaires. |
-| POST | `/api/public/contact` | Crée un Lead + email Resend. |
-| POST | `/api/public/evaluation` | Crée une Evaluation + email Resend. |
+| POST | `/api/public/contact` | Crée un Lead, puis accusé au demandeur + notification à l'agent. |
+| POST | `/api/public/evaluation` | Crée une Evaluation, puis accusé au demandeur + notification à l'agent. |
 
 Toutes les réponses sont au format `{ success, data, ... }` avec sanitization automatique (`internalNotes`, `userId` et brouillons retirés).
+
+### Formulaires publics (`contact`, `evaluation`)
+
+Logique dans `src/lib/public-forms/` (les routes ne font que brancher Prisma et Resend) :
+
+1. Validation : 400 (`fields` pour `contact`).
+2. Consentement : `rgpd !== true` (ou `consent.rgpd !== true`) → **422 `RGPD_REQUIRED`**, rien n'est créé.
+3. Création en base, prioritaire : si elle échoue, 500 et aucun e-mail.
+4. Deux e-mails **attendus** (pas de fire-and-forget) : accusé au demandeur (`replyTo` = cabinet) et notification à l'agent (`to` = `AGENCY_NOTIFICATION_EMAIL` ou `AgencySettings.email`, `replyTo` = demandeur). La première ligne de la notification dit l'objet en clair (« Estimation du prix de vente », « Estimation du loyer », « Demande au sujet d'un bien en vente »…), puis le récapitulatif complet et le lien vers l'admin.
+5. Un échec d'e-mail est journalisé et ne fait jamais échouer la requête : 201. Accusé au demandeur : `[Email]`. Notification à l'agent (refus de Resend, exception, clé absente, destinataire absent) : `console.error` préfixé exactement `[Email][ALERTE]`, à surveiller sur Railway.
+
+Gabarits dans `src/lib/emails/` : HTML en tableaux et styles en ligne (grenat `#5F1A24`, crème `#F8F2E9`, Georgia et police système), version texte, formatage commun dans `format.ts` (« 5 pièces ou plus », « 59,5 m² » ; jamais `NaN`, `undefined` ni `null`).
+
+## Tests
+
+```bash
+npm test        # vitest : formatage, routes contact et évaluation avec base et transport Resend factices
+```
+
+Aucun test n'appelle Resend ni une base réelle.
+
+## Ordre de déploiement (notification agent)
+
+1. Poser `AGENCY_NOTIFICATION_EMAIL` (et vérifier `AGENCY_EMAIL_FROM`, `RESEND_API_KEY`) sur Railway.
+2. Déployer **l'API d'abord**, puis la vitrine refondue. L'API reste compatible avec la vitrine actuelle (elle envoie déjà `rgpd: true`) ; la vitrine refondue envoie `intent` et le bloc `message` structuré que la notification met en forme.
+3. Après déploiement : `./scripts/smoke.sh` (lecture seule), puis une demande d'essai depuis la vitrine de préproduction pour vérifier la réception dans la boîte de l'agent. Jamais de POST d'essai scripté contre la production.
 
 ## Schéma Prisma — règle d'or
 
@@ -98,6 +126,7 @@ Le déploiement est déclenché automatiquement à chaque push sur `main` (cf. C
 - `npm ci`
 - `npm run typecheck`
 - `npm run lint`
+- `npm test`
 - `npm run build`
 
 CI vert = code prêt à déployer. Le hook Husky `pre-commit` exécute lint + typecheck en local pour échouer plus tôt.
